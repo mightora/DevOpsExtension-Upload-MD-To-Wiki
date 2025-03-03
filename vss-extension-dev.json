@@ -1,15 +1,15 @@
 {
     "manifestVersion": 1,
     "id": "dev-upload-md-to-wiki",
-    "name": "DEV 0.1.136 - Upload MD To Wiki",
-    "version": "0.1.136",
+    "name": "DEV 0.1.137 - Upload MD To Wiki",
+    "version": "0.1.137",
     "publisher": "mightoraio",
     "targets": [
         {
             "id": "Microsoft.VisualStudio.Services"
         }
     ],
-    "description": "This DevOps extension allows you to move markdown (.md) files held in an Azure DevOps repository and publish them to an Azure DevOps Wiki. Automate your documentation process and keep your wiki up-to-date with the latest markdown files from your repository.",
+    "description": "This extension moves markdown (.md) files from an Azure DevOps repo to an Azure DevOps Wiki, automating documentation and keeping your wiki up-to-date.",
     "categories": [
         "Azure Pipelines"
     ],
