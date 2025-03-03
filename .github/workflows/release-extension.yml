@@ -1,0 +1,67 @@
+name: Release Extension
+
+on:
+  push:
+    branches:
+      - main 
+
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check out the code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Node.js environment to run tfx-cli
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      # Install dependencies in the root folder
+      - name: Install dependencies in root
+        run:  |
+          pwd
+          npm install
+
+      # Install dependencies in the src folder
+      - name: Install dependencies in src
+        run:  |
+          pwd
+          cd src && npm install
+
+      # Compile TypeScript from the root folder
+      - name: Compile TypeScript
+        run:  |
+          pwd
+          npm run build
+
+      # Output all files in a tree structure to the console
+      - name: Output file tree
+        run: |
+          pwd
+          ls
+
+      # Install tfx-cli
+      - name: Install tfx-cli
+        #run: npm install -g tfx-cli
+        run: |
+          pwd
+          npm install -g tfx-cli@0.12.0
+
+     # Verify tfx-cli installation
+      - name: Verify tfx-cli installation
+        run: |
+          pwd
+          tfx --version
+
+      # Run the tfx extension publish command based on the branch
+      - name: Publish Extension to Visual Studio Marketplace
+        run: |
+            tfx extension publish --publisher mightoraio --manifest-globs vss-extension-dev.json --token ${{ secrets.VS_MARKETPLACE_TOKEN }} --rev-version
+            tfx extension publish --publisher mightoraio --manifest-globs vss-extension.json --token ${{ secrets.VS_MARKETPLACE_TOKEN }} --rev-version
+
+

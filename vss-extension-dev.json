@@ -1,0 +1,77 @@
+{
+    "manifestVersion": 1,
+    "id": "dev-upload-md-to-wiki",
+    "name": "DEV 0.1.134 - Upload MD To Wiki",
+    "version": "0.1.134",
+    "publisher": "mightoraio",
+    "targets": [
+        {
+            "id": "Microsoft.VisualStudio.Services"
+        }
+    ],
+    "description": "Creates release notes inside your project's wiki. Add release notes step to your Azure pipeline with Stories and Bugs",
+    "categories": [
+        "Azure Pipelines"
+    ],
+    "icons": {
+        "default": "images/mightora_io_icon_260x260.png",
+        "note": "images/notes_screen.png",
+        "config":"images/note_screen_configs.png"
+    },
+    "tags": [
+        "CI/CD",
+        "Notes",
+        "Release Notes",
+        "Pipeline",
+        "WorkItems"
+    ],
+    "content": {
+        "details": {
+            "path": "README.md"
+        },
+        "license": {
+            "path": "LICENSE"
+        }
+    },
+    "links": {
+        "home": {
+            "uri": "https://mightora.io"
+        },
+        "getstarted": {
+            "uri": "https://mightora.io"
+        },
+        "learn": {
+            "uri": "https://mightora.io"
+        },
+        "support": {
+            "uri": "https://mightora.io"
+        },
+        "repository": {
+            "uri": "https://github.com/mightora/Power-Platform-DevOps-Extension"
+        },
+        "issues": {
+            "uri": "https://github.com/mightora/Power-Platform-DevOps-Extension/issues"
+        }
+    },
+    "repository": {
+        "type": "git",
+        "uri": "https://github.com/mightora/Power-Platform-DevOps-Extension"
+    },
+    "files": [
+        {
+            "path": "src"
+        }
+    ],
+    "contributions": [
+        {
+            "id": "wiki-task",
+            "type": "ms.vss-distributed-task.task",
+            "targets": [
+                "ms.vss-distributed-task.tasks"
+            ],
+            "properties": {
+                "name": "src"
+            }
+        }
+    ]
+}

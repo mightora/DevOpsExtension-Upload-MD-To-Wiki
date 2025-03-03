@@ -1,0 +1,81 @@
+{
+    "manifestVersion": 1,
+    "id": "upload-md-to-wiki",
+    "name": "Upload MD To Wiki",
+    "version": "1.1.124",
+    "publisher": "mightoraio",
+    "galleryFlags": [
+        "Public",
+        "Preview"
+    ],
+    "targets": [
+        {
+            "id": "Microsoft.VisualStudio.Services"
+        }
+    ],
+    "description": "Creates release notes inside your project's wiki. Add release notes step to your Azure pipeline with Stories and Bugs",
+    "categories": [
+        "Azure Pipelines"
+    ],
+    "icons": {
+        "default": "images/mightora_io_icon_260x260.png",
+        "note": "images/notes_screen.png",
+        "config":"images/note_screen_configs.png"
+    },
+    "tags": [
+        "CI/CD",
+        "Notes",
+        "Release Notes",
+        "Pipeline",
+        "WorkItems"
+    ],
+    "content": {
+        "details": {
+            "path": "README.md"
+        },
+        "license": {
+            "path": "LICENSE"
+        }
+    },
+    "links": {
+        "home": {
+            "uri": "https://mightora.io"
+        },
+        "getstarted": {
+            "uri": "https://mightora.io"
+        },
+        "learn": {
+            "uri": "https://mightora.io"
+        },
+        "support": {
+            "uri": "https://mightora.io"
+        },
+        "repository": {
+            "uri": "https://github.com/mightora/Power-Platform-DevOps-Extension"
+        },
+        "issues": {
+            "uri": "https://github.com/mightora/Power-Platform-DevOps-Extension/issues"
+        }
+    },
+    "repository": {
+        "type": "git",
+        "uri": "https://github.com/mightora/Power-Platform-DevOps-Extension"
+    },
+    "files": [
+        {
+            "path": "src"
+        }
+    ],
+    "contributions": [
+        {
+            "id": "mightora-wiki-task",
+            "type": "ms.vss-distributed-task.task",
+            "targets": [
+                "ms.vss-distributed-task.tasks"
+            ],
+            "properties": {
+                "name": "src"
+            }
+        }
+    ]
+}
