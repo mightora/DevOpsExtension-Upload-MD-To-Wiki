@@ -10,7 +10,7 @@
     "version": {
         "Major": 0,
         "Minor": 1,
-        "Patch": 134
+        "Patch": 135
     },
     "minimumAgentVersion": "2.0.0",
     "instanceNameFormat": "Upload MD To Wiki",
@@ -65,7 +65,7 @@
         }
     ],
     "execution": {
-        "Node": {
+        "Node20_1": {
             "target": "main.js"
         }
     }

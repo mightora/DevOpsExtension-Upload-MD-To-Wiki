@@ -1,8 +1,8 @@
 {
     "manifestVersion": 1,
     "id": "dev-upload-md-to-wiki",
-    "name": "DEV 0.1.134 - Upload MD To Wiki",
-    "version": "0.1.134",
+    "name": "DEV 0.1.135 - Upload MD To Wiki",
+    "version": "0.1.135",
     "publisher": "mightoraio",
     "targets": [
         {
@@ -47,15 +47,15 @@
             "uri": "https://mightora.io"
         },
         "repository": {
-            "uri": "https://github.com/mightora/Power-Platform-DevOps-Extension"
+            "uri": "https://github.com/mightora/DevOpsExtension-Upload-MD-To-Wiki"
         },
         "issues": {
-            "uri": "https://github.com/mightora/Power-Platform-DevOps-Extension/issues"
+            "uri": "hhttps://github.com/mightora/DevOpsExtension-Upload-MD-To-Wiki/issues"
         }
     },
     "repository": {
         "type": "git",
-        "uri": "https://github.com/mightora/Power-Platform-DevOps-Extension"
+        "uri": "https://github.com/mightora/DevOpsExtension-Upload-MD-To-Wiki"
     },
     "files": [
         {
