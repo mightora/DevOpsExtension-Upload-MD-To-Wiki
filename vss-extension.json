@@ -2,7 +2,7 @@
     "manifestVersion": 1,
     "id": "upload-md-to-wiki",
     "name": "Mightora Upload MD To Wiki",
-    "version": "1.1.125",
+    "version": "1.1.127",
     "publisher": "mightoraio",
     "galleryFlags": [
         "Public",
@@ -13,7 +13,7 @@
             "id": "Microsoft.VisualStudio.Services"
         }
     ],
-    "description": "Creates release notes inside your project's wiki. Add release notes step to your Azure pipeline with Stories and Bugs",
+    "description": "This DevOps extension allows you to move markdown (.md) files held in an Azure DevOps repository and publish them to an Azure DevOps Wiki. Automate your documentation process and keep your wiki up-to-date with the latest markdown files from your repository.",
     "categories": [
         "Azure Pipelines"
     ],

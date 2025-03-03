@@ -56,16 +56,6 @@ pool:
   vmImage: 'ubuntu-latest'
 
 steps:
-- task: UseNode@2
-  inputs:
-    versionSpec: '16.x'
-  displayName: 'Install Node.js'
-
-- script: |
-    npm install
-    npm run build
-  displayName: 'Install dependencies and build'
-
 - task: mightora-UploadMDToWiki@1
   inputs:
     ADOBaseUrl: '$(System.CollectionUri)'
