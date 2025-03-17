@@ -11,7 +11,6 @@ import * as bi from "azure-devops-node-api/interfaces/BuildInterfaces";
 import * as WorkItemTrackingApi from 'azure-devops-node-api/WorkItemTrackingApi';
 import * as WorkItemTrackingInterfaces from 'azure-devops-node-api/interfaces/WorkItemTrackingInterfaces';
 import axios from 'axios';
-import { execSync } from 'child_process';
 
 // Include the provided code here
 export interface IPage {
@@ -247,91 +246,11 @@ async function run() {
                 } else if (file.endsWith('.md')) {
                     console.log(`Markdown File: ${filePath}`);
                     let content = fs.readFileSync(filePath, 'utf8');
-                    
-                    // Convert Mermaid diagrams to images
-                    const diagramsDir = path.join(dir, 'diagrams');
-                    if (!fs.existsSync(diagramsDir)) {
-                        fs.mkdirSync(diagramsDir);
-                    }
-                    let updatedMdContent = content.replace(/(```|:::)(mermaid)([\s\S]*?)(```|:::)/g, (match, p1, p2, p3, p4, offset) => {
-                        console.log(`=== Convert Mermaid Diagram ===`);
-                        const mermaidFilePath = path.join(diagramsDir, `diagram-${offset}.mmd`);
-                        fs.writeFileSync(mermaidFilePath, p3.trim());
-                        const pngFilePath = mermaidFilePath.replace('.mmd', '.png');
-                        console.log(`Generating Mermaid diagram: ${mermaidFilePath}`);
-                        execSync(`mmdc -i ${mermaidFilePath} -o ${pngFilePath} --theme default`);
-                        console.log(`Generated Mermaid diagram: ${pngFilePath}`);
-                        console.log(`=== Next Diagram ===`);
-                        return `![Mermaid Diagram](${pngFilePath})`;
-                    });
-
-                    // Convert PlantUML diagrams to images
-                    updatedMdContent = updatedMdContent.replace(/```plantuml([\s\S]*?)```/g, (match, p1, offset) => {
-                        console.log(`=== Convert PlantUML Diagram ===`);
-                        const plantUmlFilePath = path.join(diagramsDir, `diagram-${offset}.puml`);
-                        fs.writeFileSync(plantUmlFilePath, p1.trim());
-                        console.log(`Generated PlantUML file: ${plantUmlFilePath}`);
-                        const pngFilePath = plantUmlFilePath.replace('.puml', '.png');
-                    
-                        const maxRetries = 3;
-                        let attempt = 0;
-                        let success = false;
-                    
-                        while (attempt < maxRetries && !success) {
-                            try {
-                                execSync(`plantuml ${plantUmlFilePath}`);
-                                console.log(`Generated PlantUML diagram for file: ${plantUmlFilePath}`);
-                                console.log(`Generated PlantUML diagram: ${pngFilePath}`);
-                                success = true;
-                            } catch (error) {
-                                console.error(`Attempt ${attempt + 1} failed: ${error.message}`);
-                                attempt++;
-                                if (attempt < maxRetries) {
-                                    console.log('Retrying...');
-                                } else {
-                                    console.error('Max retries reached. Failed to generate PlantUML diagram.');
-                                }
-                            }
-                        }
-
-                        // Ensure the file system has caught up
-                        if (success) {
-                            let fileExists = false;
-                            for (let i = 0; i < 5; i++) {
-                                if (fs.existsSync(pngFilePath)) {
-                                    fileExists = true;
-                                    break;
-                                }
-                                console.log(`Waiting for file system to catch up...`);
-                                execSync('sleep 1');
-                            }
-                            if (!fileExists) {
-                                console.error(`Image file does not exist after retries: ${pngFilePath}`);
-                                success = false;
-                            }
-                        }
-
-                        console.log(`=== Next Diagram ===`);
-                        return success ? `![PlantUML Diagram](${pngFilePath})` : match;
-                    });
-
-                    // Scan for images in the updated markdown content
-                    const imageRegex = /!\[.*?\]\((.*?)\)/g;
-                    let match;
-                    const images = [];
-                    while ((match = imageRegex.exec(updatedMdContent)) !== null) {
-                        console.log(`Image found: ${match[1]}`);
-                        images.push(match[1]);
-                    }
-
-                    // Log all images found
-                    console.log(`Images found in ${filePath}:`);
-                    images.forEach(image => console.log(image));
-
                     const relativePath = path.relative(wikiSource, filePath).replace(/\\/g, '/');
                     const wikiPagePath = `${wikiDestination}/${repositoryName}/${relativePath.replace(/\.md$/, '')}`;
                     console.log(`Ensuring path exists for: ${wikiPagePath}`);
                     await ensurePathExists(wikiUrl, path.dirname(wikiPagePath), token);
+              
 
                     console.log(`Attempting to create or update wiki page at: ${wikiPagePath}`); 
                     
@@ -344,18 +263,17 @@ async function run() {
                         const etag = headers['etag'];
                         console.log(`ETag for ${wikiPagePath} is: ${etag}`);
                         //update page
-                        const updateResponse = await wikiPageApi.UpdatePage(wikiUrl, wikiPagePath, updatedMdContent, token, etag);
+                        const updateResponse = await wikiPageApi.UpdatePage(wikiUrl, wikiPagePath, content, token, etag);
                             if (!updateResponse) {
                                 throw new Error(`Failed to update wiki page: No response data.`);
                             }
                     } catch (error) {
-                        if (axios.isAxiosError(error) && (error as axios.AxiosError).response?.status === 404) {
-                            const axiosError = error as axios.AxiosError;
-                            const typeKey = (axiosError.response?.data as any)?.typeKey;
+                        if (axios.isAxiosError(error) && error.response?.status === 404) {
+                            const typeKey = (error.response.data as any)?.typeKey;
                             if (typeKey === "WikiPageNotFoundException") {
                                 console.log(`WikiPageNotFoundException: Page not found at ${wikiPagePath}`);
                                 console.error(`[A] Trying to create new page for ${wikiPagePath}:`);
-                                const createResponse = await wikiPageApi.CreatePage(wikiUrl, wikiPagePath, updatedMdContent, token);
+                                const createResponse = await wikiPageApi.CreatePage(wikiUrl, wikiPagePath, content, token);
                                 if (!createResponse) {
                                     throw new Error(`Failed to create wiki page: No response data.`);
                                 }
@@ -363,7 +281,7 @@ async function run() {
                             } else {
                                 console.error(`Failed to retrieve ETag for ${wikiPagePath}:`, (error as Error).message);
                                 console.error(`[B] Trying to create new page for ${wikiPagePath}:`);
-                                const createResponse = await wikiPageApi.CreatePage(wikiUrl, wikiPagePath, updatedMdContent, token);
+                                const createResponse = await wikiPageApi.CreatePage(wikiUrl, wikiPagePath, content, token);
                                 if (!createResponse) {
                                     throw new Error(`Failed to create wiki page: No response data.`);
                                 }
@@ -372,7 +290,7 @@ async function run() {
                         } else {
                             console.error(`Failed to retrieve ETag for ${wikiPagePath}:`, (error as Error).message);
                             console.error(`[C] Trying to create new page for ${wikiPagePath}:`);
-                            const createResponse = await wikiPageApi.CreatePage(wikiUrl, wikiPagePath, updatedMdContent, token);
+                            const createResponse = await wikiPageApi.CreatePage(wikiUrl, wikiPagePath, content, token);
                             if (!createResponse) {
                                 throw new Error(`Failed to create wiki page: No response data.`);
                             }
@@ -392,6 +310,6 @@ async function run() {
         console.error('🚨 Error:', error);
         tl.setResult(tl.TaskResult.Failed, (error as Error).message);
     }
-} 
+}
 
 run();
