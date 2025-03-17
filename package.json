@@ -20,7 +20,9 @@
   "homepage": "https://github.com/codechavez/release-the-notes#readme",
   "dependencies": {
     "axios": "^0.27.2",
-    "azure-pipelines-task-lib": "^4.0.0-preview"
+    "azure-pipelines-task-lib": "^4.0.0-preview",
+    "@mermaid-js/mermaid-cli": "^9.1.2",
+    "plantuml": "^0.9.1"
   },
   "devDependencies": {
     "@types/mocha": "^9.1.1",
