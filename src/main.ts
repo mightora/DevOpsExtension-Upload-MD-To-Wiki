@@ -246,11 +246,18 @@ async function run() {
                 } else if (file.endsWith('.md')) {
                     console.log(`Markdown File: ${filePath}`);
                     let content = fs.readFileSync(filePath, 'utf8');
+                    
+                    // Scan for images in the markdown content
+                    const imageRegex = /!\[.*?\]\((.*?)\)/g;
+                    let match;
+                    while ((match = imageRegex.exec(content)) !== null) {
+                        console.log(`Image found: ${match[1]}`);
+                    }
+
                     const relativePath = path.relative(wikiSource, filePath).replace(/\\/g, '/');
                     const wikiPagePath = `${wikiDestination}/${repositoryName}/${relativePath.replace(/\.md$/, '')}`;
                     console.log(`Ensuring path exists for: ${wikiPagePath}`);
                     await ensurePathExists(wikiUrl, path.dirname(wikiPagePath), token);
-              
 
                     console.log(`Attempting to create or update wiki page at: ${wikiPagePath}`); 
                     
