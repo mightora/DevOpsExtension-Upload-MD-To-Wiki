@@ -349,8 +349,9 @@ async function run() {
                                 throw new Error(`Failed to update wiki page: No response data.`);
                             }
                     } catch (error) {
-                        if (axios.isAxiosError(error) && error.response?.status === 404) {
-                            const typeKey = (error.response.data as any)?.typeKey;
+                        if (axios.isAxiosError(error) && (error as axios.AxiosError).response?.status === 404) {
+                            const axiosError = error as axios.AxiosError;
+                            const typeKey = (axiosError.response?.data as any)?.typeKey;
                             if (typeKey === "WikiPageNotFoundException") {
                                 console.log(`WikiPageNotFoundException: Page not found at ${wikiPagePath}`);
                                 console.error(`[A] Trying to create new page for ${wikiPagePath}:`);
@@ -391,6 +392,6 @@ async function run() {
         console.error('🚨 Error:', error);
         tl.setResult(tl.TaskResult.Failed, (error as Error).message);
     }
-}
+} 
 
 run();
