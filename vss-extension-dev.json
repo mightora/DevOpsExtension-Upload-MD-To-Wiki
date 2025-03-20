@@ -1,8 +1,8 @@
 {
     "manifestVersion": 1,
     "id": "dev-upload-md-to-wiki",
-    "name": "DEV 0.1.150 - Upload MD To Wiki",
-    "version": "0.1.150",
+    "name": "DEV 0.1.151 - Upload MD To Wiki",
+    "version": "0.1.151",
     "publisher": "mightoraio",
     "targets": [
         {
