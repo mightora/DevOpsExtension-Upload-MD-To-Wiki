@@ -262,8 +262,9 @@ async function run() {
             });
         
             // Extract the attachment URL from the response
-            const attachmentUrl = response;
-            const attachmentPath = `/.attachments/${uniqueImageName}-${attachmentUrl.split('/').pop()}`;
+            //const attachmentUrl = response;
+            //const attachmentPath = `/.attachments/${uniqueImageName}-${attachmentUrl.split('/').pop()}`;
+            const attachmentPath = `/.attachments/${uniqueImageName}`;
         
             return attachmentPath;
         }
