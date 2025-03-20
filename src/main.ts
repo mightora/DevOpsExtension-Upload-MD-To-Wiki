@@ -238,7 +238,9 @@ async function run() {
 
         async function uploadImageAsAttachment(wikiUrl: string, imagePath: string, token: string): Promise<string> {
             const imageName = path.basename(imagePath);
-            const url = `${wikiUrl}/attachments?name=${imageName}&api-version=6.0`;
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const uniqueImageName = `${imageName}-${timestamp}`;
+            const url = `${wikiUrl}/attachments?name=${uniqueImageName}&api-version=6.0`;
             const imageData = fs.readFileSync(imagePath);
         
             console.log(`Uploading image to URL: ${url}`);
@@ -252,13 +254,13 @@ async function run() {
             }).then((response) => {
                 return response.data.url;
             }).catch((error) => {
-                console.error(`Failed to upload image: ${imageName}`, error);
-                throw new Error(`Failed to upload image: ${imageName}`);
+                console.error(`Failed to upload image: ${uniqueImageName}`, error);
+                throw new Error(`Failed to upload image: ${uniqueImageName}`);
             });
         
             // Extract the attachment URL from the response
             const attachmentUrl = response;
-            const attachmentPath = `/.attachments/${imageName}-${attachmentUrl.split('/').pop()}`;
+            const attachmentPath = `/.attachments/${uniqueImageName}-${attachmentUrl.split('/').pop()}`;
         
             return attachmentPath;
         }
