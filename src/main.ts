@@ -327,6 +327,9 @@ async function run() {
             const url = `${wikiUrl}/attachments?name=${imageName}&api-version=6.0`;
             const imageData = fs.readFileSync(imagePath);
         
+            console.log(`Uploading image to URL: ${url}`);
+            console.log(`Absolute path of the image: ${imagePath}`);
+        
             const response = await axios.put(url, imageData, {
                 headers: {
                     ...wikiPageApi.getHeaders(token),
