@@ -46,7 +46,7 @@ export interface WikiPageWithContent extends WikiInterfaces.WikiPage {
 
 export class WikiPageApi implements IWikiPageApi {
 
-    private getHeaders(token: string, etag?: string) {
+    public getHeaders(token: string, etag?: string) {
         const headers: { [key: string]: string } = {
             Accept: 'application/json',
             'Content-Type': 'application/json',
@@ -246,6 +246,10 @@ async function run() {
                 } else if (file.endsWith('.md')) {
                     console.log(`Markdown File: ${filePath}`);
                     let content = fs.readFileSync(filePath, 'utf8');
+
+                    // Remove \newpage from the content
+                    content = content.replace(/\\newpage/g, '');
+
                     const relativePath = path.relative(wikiSource, filePath).replace(/\\/g, '/');
                     const wikiPagePath = `${wikiDestination}/${repositoryName}/${relativePath.replace(/\.md$/, '')}`;
                     console.log(`Ensuring path exists for: ${wikiPagePath}`);
@@ -275,19 +279,15 @@ async function run() {
 
                     console.log(`Attempting to create or update wiki page at: ${wikiPagePath}`); 
                     
-                    //let currentPath = '';
-                    //currentPath += `/${project}/_apis/wiki/wikis/${repositoryName}/pages?path=${wikiPagePath}&api-version=7.1`;
-                    //console.log(`Making request to GET ${orgUrl}${currentPath}`);            
-                    
                     try {
                         const { headers } = await wikiPageApi.getPage(wikiUrl,  wikiPagePath, token);
                         const etag = headers['etag'];
                         console.log(`ETag for ${wikiPagePath} is: ${etag}`);
                         //update page
                         const updateResponse = await wikiPageApi.UpdatePage(wikiUrl, wikiPagePath, content, token, etag);
-                            if (!updateResponse) {
-                                throw new Error(`Failed to update wiki page: No response data.`);
-                            }
+                        if (!updateResponse) {
+                            throw new Error(`Failed to update wiki page: No response data.`);
+                        }
                     } catch (error) {
                         if (axios.isAxiosError(error) && error.response?.status === 404) {
                             const typeKey = (error.response.data as any)?.typeKey;
