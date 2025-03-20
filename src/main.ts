@@ -239,7 +239,7 @@ async function run() {
         async function uploadImageAsAttachment(wikiUrl: string, imagePath: string, token: string): Promise<string> {
             const imageName = path.basename(imagePath);
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            const uniqueImageName = `${imageName}-${timestamp}`;
+            const uniqueImageName = `${timestamp}-${imageName}`;
             const url = `${wikiUrl}/attachments?name=${uniqueImageName}&api-version=6.0`;
             const imageData = fs.readFileSync(imagePath);
         
