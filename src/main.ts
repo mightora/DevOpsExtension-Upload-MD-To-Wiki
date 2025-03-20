@@ -236,6 +236,33 @@ async function run() {
         console.log(`Ensuring path exists: ${wikiDestination}/${repositoryName}`);
         await ensurePathExists(wikiUrl, `${wikiDestination}/${repositoryName}`, token);
 
+        async function uploadImageAsAttachment(wikiUrl: string, imagePath: string, token: string): Promise<string> {
+            const imageName = path.basename(imagePath);
+            const url = `${wikiUrl}/attachments?name=${imageName}&api-version=6.0`;
+            const imageData = fs.readFileSync(imagePath);
+        
+            console.log(`Uploading image to URL: ${url}`);
+            console.log(`Absolute path of the image: ${imagePath}`);
+        
+            const response = await axios.put(url, imageData, {
+                headers: {
+                    ...wikiPageApi.getHeaders(token),
+                    'Content-Type': 'application/octet-stream'
+                }
+            }).then((response) => {
+                return response.data.url;
+            }).catch((error) => {
+                console.error(`Failed to upload image: ${imageName}`, error);
+                throw new Error(`Failed to upload image: ${imageName}`);
+            });
+        
+            // Extract the attachment URL from the response
+            const attachmentUrl = response;
+            const attachmentPath = `/.attachments/${imageName}-${attachmentUrl.split('/').pop()}`;
+        
+            return attachmentPath;
+        }
+        
         // Function to log and process .md files
         async function processMdFiles(dir: string) {
             const files = fs.readdirSync(dir);
@@ -246,15 +273,15 @@ async function run() {
                 } else if (file.endsWith('.md')) {
                     console.log(`Markdown File: ${filePath}`);
                     let content = fs.readFileSync(filePath, 'utf8');
-
+        
                     // Remove \newpage from the content
                     content = content.replace(/\\newpage/g, '');
-
+        
                     const relativePath = path.relative(wikiSource, filePath).replace(/\\/g, '/');
                     const wikiPagePath = `${wikiDestination}/${repositoryName}/${relativePath.replace(/\.md$/, '')}`;
                     console.log(`Ensuring path exists for: ${wikiPagePath}`);
                     await ensurePathExists(wikiUrl, path.dirname(wikiPagePath), token);
-
+        
                     // Identify images in the markdown content
                     const imageRegex = /!\[.*?\]\((.*?)\)/g;
                     let match;
@@ -263,7 +290,7 @@ async function run() {
                         console.log(`Image found: ${match[1]}`);
                         images.push(match[1]);
                     }
-
+        
                     // Upload images as attachments and update markdown content
                     for (const image of images) {
                         const imagePath = path.join(dir, image);
@@ -276,7 +303,7 @@ async function run() {
                             console.error(`Image file not found: ${imagePath}`);
                         }
                     }
-
+        
                     console.log(`Attempting to create or update wiki page at: ${wikiPagePath}`); 
                     
                     try {
@@ -320,30 +347,6 @@ async function run() {
                     
                 }
             }
-        }
-
-        async function uploadImageAsAttachment(wikiUrl: string, imagePath: string, token: string): Promise<string> {
-            const imageName = path.basename(imagePath);
-            const url = `${wikiUrl}/attachments?name=${imageName}&api-version=6.0`;
-            const imageData = fs.readFileSync(imagePath);
-            const base64ImageData = imageData.toString('base64');
-        
-            console.log(`Uploading image to URL: ${url}`);
-            console.log(`Absolute path of the image: ${imagePath}`);
-        
-            const response = await axios.put(url, base64ImageData, {
-                headers: {
-                    ...wikiPageApi.getHeaders(token),
-                    'Content-Type': 'application/octet-stream'
-                }
-            }).then((response) => {
-                return response.data.url;
-            }).catch((error) => {
-                console.error(`Failed to upload image: ${imageName}`, error);
-                throw new Error(`Failed to upload image: ${imageName}`);
-            });
-        
-            return response;
         }
 
         // Process all .md files in the wikiSource directory
