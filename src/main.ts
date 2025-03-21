@@ -223,7 +223,8 @@ async function run() {
                 } else {
                     console.log(`Page not found: ${currentPath}. Creating the page.`);
                     try {
-                        await wikiPageApi.CreatePage(wikiUrl, currentPath, `# ${part}`, token);
+                        const content = `# ${part}\n\n[[ _TOSP_ ]]`;
+                        await wikiPageApi.CreatePage(wikiUrl, currentPath, content, token);
                         console.log(`Page created at ${currentPath}`);
                     } catch (error) {
                         console.error(`Failed to create page at ${currentPath}:`, (error as Error).message);
