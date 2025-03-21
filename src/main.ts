@@ -153,6 +153,7 @@ async function run() {
         let wikiDestination: string = tl.getInput("WikiDestination", true);
         let versionNumber: string = tl.getInput("MDVersion", true);
         let wikiSource: string = tl.getInput("wikiSource", true); 
+        let headerMessage: string = tl.getInput("HeaderMessage", false) || '';
 
         let token: string = process.env.SYSTEM_ACCESSTOKEN;
         let project: string = process.env.SYSTEM_TEAMPROJECT;
@@ -167,6 +168,7 @@ async function run() {
         console.log(`Wiki Destination: ${wikiDestination}`);
         console.log(`Version Number: ${versionNumber}`);
         console.log(`Wiki Source: ${wikiSource}`); 
+        console.log(`Header Message: ${headerMessage}`);
         console.log(`Token Present: ${token ? "Yes" : "No"}`);
 
         if (!token) {
@@ -216,7 +218,6 @@ async function run() {
                         const etag = headers['etag'];
                         console.log(`ETag for ${currentPath}: ${etag}`);
                     } catch (error) {
-                        console.error(`Failed to retrieve ETag for ${currentPath}:`, (error as Error).message);
                         console.error(`Failed to retrieve ETag for ${currentPath}:`, (error as Error).message);
                     }
                 } else {
@@ -282,7 +283,12 @@ async function run() {
         
                     // Remove \newpage from the content
                     content = content.replace(/\\newpage/g, '');
-        
+                    
+                    // Prepend the header message to the content
+                    if (headerMessage) {
+                        content = `${headerMessage}\n\n${content}`;
+                    }
+
                     const relativePath = path.relative(wikiSource, filePath).replace(/\\/g, '/');
                     const wikiPagePath = `${wikiDestination}/${repositoryName}/${relativePath.replace(/\.md$/, '')}`;
                     console.log(`Ensuring path exists for: ${wikiPagePath}`);

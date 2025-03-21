@@ -10,7 +10,7 @@
     "version": {
         "Major": 0,
         "Minor": 1,
-        "Patch": 153
+        "Patch": 154
     },
     "minimumAgentVersion": "2.0.0",
     "instanceNameFormat": "Upload MD To Wiki",
@@ -62,6 +62,14 @@
             "defaultValue": "UploadedFromPipeline",
             "required": true,
             "helpMarkDown": "Enter the wiki destination name example. UploadedFromPipeline"
+        },
+        {
+            "name": "HeaderMessage",
+            "type": "multiLine",
+            "label": "Header Message",
+            "defaultValue": "<mark>DO NOT EDIT DIRECTLY - EDIT IN REPO</mark>",
+            "required": false,
+            "helpMarkDown": "Enter a header message to be added to every page output by the tool"
         }
     ],
     "execution": {
