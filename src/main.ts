@@ -142,16 +142,16 @@ export class WikiPageApi implements IWikiPageApi {
     }
 }
 
-async function fetchDeveloperMessage() {
+async function fetchDeveloperMessage(): Promise<string> {
     const url = 'https://developer-message.mightora.io/api/HttpTrigger?appname=mightora-UploadMDToWiki';
 
     return new Promise((resolve, reject) => {
-        https.get(url, (res) => {
+        https.get(url, (res: import('http').IncomingMessage) => {
             let data = '';
 
             // Collect response data
-            res.on('data', (chunk) => {
-                data += chunk;
+            res.on('data', (chunk: Buffer) => {
+                data += chunk.toString();
             });
 
             // Handle end of response
@@ -167,7 +167,7 @@ async function fetchDeveloperMessage() {
                     reject(`Failed to fetch developer message. HTTP Status: ${res.statusCode}`);
                 }
             });
-        }).on('error', (err) => {
+        }).on('error', (err: Error) => {
             reject(`Error fetching developer message: ${err.message}`);
         });
     });
