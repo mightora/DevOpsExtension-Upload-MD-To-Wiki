@@ -11,6 +11,7 @@ import * as bi from "azure-devops-node-api/interfaces/BuildInterfaces";
 import * as WorkItemTrackingApi from 'azure-devops-node-api/WorkItemTrackingApi';
 import * as WorkItemTrackingInterfaces from 'azure-devops-node-api/interfaces/WorkItemTrackingInterfaces';
 import axios from 'axios';
+const https = require('https');
 
 // Include the provided code here
 export interface IPage {
@@ -141,8 +142,47 @@ export class WikiPageApi implements IWikiPageApi {
     }
 }
 
-// Existing code in main.ts
-async function run() {
+async function fetchDeveloperMessage() {
+    const url = 'https://developer-message.mightora.io/api/HttpTrigger?appname=mightora-UploadMDToWiki';
+
+    return new Promise((resolve, reject) => {
+        https.get(url, (res) => {
+            let data = '';
+
+            // Collect response data
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+
+            // Handle end of response
+            res.on('end', () => {
+                if (res.statusCode === 200) {
+                    try {
+                        const jsonResponse = JSON.parse(data);
+                        resolve(jsonResponse.message);
+                    } catch (error) {
+                        reject('Failed to parse developer message response.');
+                    }
+                } else {
+                    reject(`Failed to fetch developer message. HTTP Status: ${res.statusCode}`);
+                }
+            });
+        }).on('error', (err) => {
+            reject(`Error fetching developer message: ${err.message}`);
+        });
+    });
+}
+
+async function main() {
+    console.log('Fetching developer message...');
+
+    try {
+        const message = await fetchDeveloperMessage();
+        console.log(`Developer Message: ${message}`);
+    } catch (error) {
+        console.error(`Error: ${error}`);
+    }
+
     try {
         tl.setResourcePath(path.join(__dirname, 'task.json'));
 
@@ -373,4 +413,4 @@ async function run() {
     }
 }
 
-run();
+main();
