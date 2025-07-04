@@ -448,7 +448,8 @@ async function main() {
                     collectExpectedWikiPages(filePath, expectedPages);
                 } else if (file.endsWith('.md')) {
                     const relativePath = path.relative(wikiSource, filePath).replace(/\\/g, '/');
-                    const wikiPagePath = `${wikiDestination}/${repositoryName}/${relativePath.replace(/\.md$/, '')}`;
+                    // Ensure the wiki page path starts with a leading slash to match actual wiki paths
+                    const wikiPagePath = `/${wikiDestination}/${repositoryName}/${relativePath.replace(/\.md$/, '')}`;
                     console.log(`Found markdown file: ${filePath}`);
                     console.log(`  - Relative path: ${relativePath}`);
                     console.log(`  - Expected wiki path: ${wikiPagePath}`);
@@ -460,10 +461,15 @@ async function main() {
         // Function to delete orphaned wiki pages
         async function deleteOrphanedWikiPages(expectedPages: Set<string>) {
             console.log("Checking for orphaned wiki pages to delete...");
-            console.log(`Managed path prefix: "${wikiDestination}/${repositoryName}/"`);
             
             // Get current wiki pages under our managed path
-            const managedPathPrefix = `${wikiDestination}/${repositoryName}/`;
+            // Handle both cases: with and without leading slash
+            const managedPathPrefix = `/${wikiDestination}/${repositoryName}/`;
+            const managedPathPrefixNoSlash = `${wikiDestination}/${repositoryName}/`;
+            
+            console.log(`Managed path prefix (with slash): "${managedPathPrefix}"`);
+            console.log(`Managed path prefix (no slash): "${managedPathPrefixNoSlash}"`);
+            
             const orphanedPages: string[] = [];
             const managedPages: string[] = [];
             
@@ -471,7 +477,12 @@ async function main() {
             for (const page of wikipages) {
                 if (page.path) {
                     console.log(`Checking page: "${page.path}"`);
-                    if (page.path.startsWith(managedPathPrefix)) {
+                    
+                    // Check if page is under our managed path (handle both slash variations)
+                    const isManaged = page.path.startsWith(managedPathPrefix) || 
+                                    page.path.startsWith(managedPathPrefixNoSlash);
+                    
+                    if (isManaged) {
                         managedPages.push(page.path);
                         console.log(`  - MANAGED: Under our managed path`);
                         if (!expectedPages.has(page.path)) {
@@ -482,6 +493,7 @@ async function main() {
                         }
                     } else {
                         console.log(`  - IGNORED: Outside managed path`);
+                        console.log(`    Expected to start with: "${managedPathPrefix}" or "${managedPathPrefixNoSlash}"`);
                     }
                 } else {
                     console.log(`Skipping page with no path: ${JSON.stringify(page)}`);
