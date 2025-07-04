@@ -1,5 +1,5 @@
 {
-  "name": "release-the-notes",
+  "name": "upload-md-to-wiki",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
