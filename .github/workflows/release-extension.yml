@@ -3,7 +3,9 @@ name: Release Extension
 on:
   push:
     branches:
-      - main 
+      - main
+      - 'feature/**'
+      - 'dev/**' 
 
 
 jobs:
@@ -59,9 +61,14 @@ jobs:
           tfx --version
 
       # Run the tfx extension publish command based on the branch
-      - name: Publish Extension to Visual Studio Marketplace
+      - name: Publish Extension to Visual Studio Marketplace (Development)
+        if: github.ref != 'refs/heads/main'
         run: |
             tfx extension publish --publisher mightoraio --manifest-globs vss-extension-dev.json --token ${{ secrets.VS_MARKETPLACE_TOKEN }} --rev-version
+
+      - name: Publish Extension to Visual Studio Marketplace (Production)
+        if: github.ref == 'refs/heads/main'
+        run: |
             tfx extension publish --publisher mightoraio --manifest-globs vss-extension.json --token ${{ secrets.VS_MARKETPLACE_TOKEN }} --rev-version
 
 

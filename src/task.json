@@ -10,7 +10,7 @@
     "version": {
         "Major": 0,
         "Minor": 1,
-        "Patch": 156
+        "Patch": 157
     },
     "minimumAgentVersion": "2.0.0",
     "instanceNameFormat": "Upload MD To Wiki",
@@ -70,6 +70,14 @@
             "defaultValue": "<mark>DO NOT EDIT DIRECTLY - EDIT IN REPO</mark>",
             "required": false,
             "helpMarkDown": "Enter a header message to be added to every page output by the tool"
+        },
+        {
+            "name": "IncludePageLink",
+            "type": "boolean",
+            "label": "Include Link to This Page",
+            "defaultValue": "false",
+            "required": false,
+            "helpMarkDown": "When enabled, adds a 'Link to this page' at the bottom of each wiki page"
         }
     ],
     "execution": {

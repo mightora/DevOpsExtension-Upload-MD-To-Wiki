@@ -194,6 +194,7 @@ async function main() {
         let versionNumber: string = tl.getInput("MDVersion", true);
         let wikiSource: string = tl.getInput("wikiSource", true); 
         let headerMessage: string = tl.getInput("HeaderMessage", false) || '';
+        let includePageLink: boolean = tl.getBoolInput("IncludePageLink", false) || false;
 
         let token: string = process.env.SYSTEM_ACCESSTOKEN;
         let project: string = process.env.SYSTEM_TEAMPROJECT;
@@ -209,6 +210,7 @@ async function main() {
         console.log(`Version Number: ${versionNumber}`);
         console.log(`Wiki Source: ${wikiSource}`); 
         console.log(`Header Message: ${headerMessage}`);
+        console.log(`Include Page Link: ${includePageLink}`);
         console.log(`Token Present: ${token ? "Yes" : "No"}`);
 
         if (!token) {
@@ -311,6 +313,15 @@ async function main() {
             return attachmentPath;
         }
         
+        // Function to generate wiki page link
+        function generateWikiPageLink(orgUrl: string, project: string, wikiPagePath: string): string {
+            // Remove leading slash if present
+            const cleanPath = wikiPagePath.startsWith('/') ? wikiPagePath.substring(1) : wikiPagePath;
+            // Encode the path for URL
+            const encodedPath = encodeURIComponent(cleanPath);
+            return `${orgUrl}${project}/_wiki/wikis/${project}.wiki?pagePath=%2F${encodedPath}`;
+        }
+
         // Function to log and process .md files
         async function processMdFiles(dir: string) {
             const files = fs.readdirSync(dir);
@@ -332,6 +343,13 @@ async function main() {
 
                     const relativePath = path.relative(wikiSource, filePath).replace(/\\/g, '/');
                     const wikiPagePath = `${wikiDestination}/${repositoryName}/${relativePath.replace(/\.md$/, '')}`;
+                    
+                    // Append the page link if enabled
+                    if (includePageLink) {
+                        const pageLink = generateWikiPageLink(orgUrl, project, wikiPagePath);
+                        content = `${content}\n\n---\n\n**[Link to this page](${pageLink})**`;
+                    }
+                    
                     console.log(`Ensuring path exists for: ${wikiPagePath}`);
                     await ensurePathExists(wikiUrl, path.dirname(wikiPagePath), token);
         
