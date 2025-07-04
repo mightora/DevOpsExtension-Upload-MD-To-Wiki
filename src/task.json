@@ -10,7 +10,7 @@
     "version": {
         "Major": 0,
         "Minor": 1,
-        "Patch": 158
+        "Patch": 159
     },
     "minimumAgentVersion": "2.0.0",
     "instanceNameFormat": "Upload MD To Wiki",
@@ -78,6 +78,14 @@
             "defaultValue": "false",
             "required": false,
             "helpMarkDown": "When enabled, adds a 'Link to this page' at the bottom of each wiki page"
+        },
+        {
+            "name": "DeleteOrphanedPages",
+            "type": "boolean",
+            "label": "Delete Wiki Pages for Deleted MD Files",
+            "defaultValue": "false",
+            "required": false,
+            "helpMarkDown": "When enabled, automatically deletes wiki pages that no longer have corresponding markdown files in the source repository. Use with caution."
         }
     ],
     "execution": {
