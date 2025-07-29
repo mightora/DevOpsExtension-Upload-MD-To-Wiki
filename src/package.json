@@ -1,5 +1,5 @@
 {
-  "name": "release-the-notes",
+  "name": "upload-md-to-wiki",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -8,15 +8,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/codechavez/release-the-notes.git"
+    "url": "git+https://github.com/mightora/DevOpsExtension-Upload-MD-To-Wiki"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/codechavez/release-the-notes/issues"
+    "url": "https://github.com/mightora/DevOpsExtension-Upload-MD-To-Wiki/issues"
   },
-  "homepage": "https://github.com/codechavez/release-the-notes#readme",
+  "homepage": "https://github.com/mightora/DevOpsExtension-Upload-MD-To-Wiki#readme",
   "dependencies": {
     "axios": "^0.27.2",
     "azure-devops-node-api": "^11.2.0",

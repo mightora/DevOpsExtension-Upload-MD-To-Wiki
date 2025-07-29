@@ -39,6 +39,7 @@ export interface IWikiPageApi {
     getPage(wikiUrl: string, page: string, token: string): Promise<{ data: WikiPageWithContent, headers: any }>;
     CreatePage(wikiUrl: string, page: string, content: string, token: string): Promise<WikiPageWithContent>;
     UpdatePage(wikiUrl: string, page: string, content: string, token: string, etag: string): Promise<WikiPageWithContent>;
+    DeletePage(wikiUrl: string, page: string, token: string): Promise<void>;
 }
 
 export interface WikiPageWithContent extends WikiInterfaces.WikiPage {
@@ -140,6 +141,21 @@ export class WikiPageApi implements IWikiPageApi {
         }
         return { data: response.data, headers: response.headers };
     }
+
+    async DeletePage(wikiUrl: string, page: string, token: string): Promise<void> {
+        let url: string = `${wikiUrl}/pages?path=${page}&api-version=6.0`;
+
+        await axios.delete(
+            url,
+            { headers: this.getHeaders(token) }
+        ).then((response: any) => {
+            return response.data;
+        })
+        .catch((error: any) => {
+            console.log(`Error deleting page ${page}:`, error);
+            throw error;
+        });
+    }
 }
 
 async function fetchDeveloperMessage(): Promise<string> {
@@ -194,6 +210,8 @@ async function main() {
         let versionNumber: string = tl.getInput("MDVersion", true);
         let wikiSource: string = tl.getInput("wikiSource", true); 
         let headerMessage: string = tl.getInput("HeaderMessage", false) || '';
+        let includePageLink: boolean = tl.getBoolInput("IncludePageLink", false) || false;
+        let deleteOrphanedPages: boolean = tl.getBoolInput("DeleteOrphanedPages", false) || false;
 
         let token: string = process.env.SYSTEM_ACCESSTOKEN;
         let project: string = process.env.SYSTEM_TEAMPROJECT;
@@ -209,6 +227,8 @@ async function main() {
         console.log(`Version Number: ${versionNumber}`);
         console.log(`Wiki Source: ${wikiSource}`); 
         console.log(`Header Message: ${headerMessage}`);
+        console.log(`Include Page Link: ${includePageLink}`);
+        console.log(`Delete Orphaned Pages: ${deleteOrphanedPages}`);
         console.log(`Token Present: ${token ? "Yes" : "No"}`);
 
         if (!token) {
@@ -263,7 +283,7 @@ async function main() {
                 } else {
                     console.log(`Page not found: ${currentPath}. Creating the page.`);
                     try {
-                        const content = `# ${part}\n\n[[ _TOSP_ ]]`;
+                        const content = `# ${part}\n \n [[ _TOSP_ ]] `;
                         await wikiPageApi.CreatePage(wikiUrl, currentPath, content, token);
                         console.log(`Page created at ${currentPath}`);
                     } catch (error) {
@@ -288,7 +308,7 @@ async function main() {
         
             console.log(`Uploading image to URL: ${url}`);
             console.log(`Absolute path of the image: ${imagePath}`);
-            console.log(`Upload Image Data: ${base64ImageData}`);
+            console.log(`Upload Image Data`);
             console.log(`Try and upload image: ${imageName}`);
         
             const response = await axios.put(url, base64ImageData, {
@@ -311,6 +331,15 @@ async function main() {
             return attachmentPath;
         }
         
+        // Function to generate wiki page link
+        function generateWikiPageLink(orgUrl: string, project: string, wikiPagePath: string): string {
+            // Remove leading slash if present
+            const cleanPath = wikiPagePath.startsWith('/') ? wikiPagePath.substring(1) : wikiPagePath;
+            // Encode the path for URL
+            const encodedPath = encodeURIComponent(cleanPath);
+            return `${orgUrl}${project}/_wiki/wikis/${project}.wiki?pagePath=%2F${encodedPath}`;
+        }
+
         // Function to log and process .md files
         async function processMdFiles(dir: string) {
             const files = fs.readdirSync(dir);
@@ -332,6 +361,13 @@ async function main() {
 
                     const relativePath = path.relative(wikiSource, filePath).replace(/\\/g, '/');
                     const wikiPagePath = `${wikiDestination}/${repositoryName}/${relativePath.replace(/\.md$/, '')}`;
+                    
+                    // Append the page link if enabled
+                    if (includePageLink) {
+                        const pageLink = generateWikiPageLink(orgUrl, project, wikiPagePath);
+                        content = `${content}\n\n---\n\n**[Link to this page](${pageLink})**`;
+                    }
+                    
                     console.log(`Ensuring path exists for: ${wikiPagePath}`);
                     await ensurePathExists(wikiUrl, path.dirname(wikiPagePath), token);
         
@@ -402,10 +438,123 @@ async function main() {
             }
         }
 
+        // Function to collect all expected wiki page paths from markdown files
+        function collectExpectedWikiPages(dir: string, expectedPages: Set<string>) {
+            console.log(`Scanning directory for markdown files: ${dir}`);
+            const files = fs.readdirSync(dir);
+            for (const file of files) {
+                const filePath = path.join(dir, file);
+                if (fs.statSync(filePath).isDirectory()) {
+                    collectExpectedWikiPages(filePath, expectedPages);
+                } else if (file.endsWith('.md')) {
+                    const relativePath = path.relative(wikiSource, filePath).replace(/\\/g, '/');
+                    // Ensure the wiki page path starts with a leading slash to match actual wiki paths
+                    const wikiPagePath = `/${wikiDestination}/${repositoryName}/${relativePath.replace(/\.md$/, '')}`;
+                    console.log(`Found markdown file: ${filePath}`);
+                    console.log(`  - Relative path: ${relativePath}`);
+                    console.log(`  - Expected wiki path: ${wikiPagePath}`);
+                    expectedPages.add(wikiPagePath);
+                }
+            }
+        }
+
+        // Function to delete orphaned wiki pages
+        async function deleteOrphanedWikiPages(expectedPages: Set<string>) {
+            console.log("Checking for orphaned wiki pages to delete...");
+            
+            // Get current wiki pages under our managed path
+            // Handle both cases: with and without leading slash
+            const managedPathPrefix = `/${wikiDestination}/${repositoryName}/`;
+            const managedPathPrefixNoSlash = `${wikiDestination}/${repositoryName}/`;
+            
+            console.log(`Managed path prefix (with slash): "${managedPathPrefix}"`);
+            console.log(`Managed path prefix (no slash): "${managedPathPrefixNoSlash}"`);
+            
+            const orphanedPages: string[] = [];
+            const managedPages: string[] = [];
+            
+            console.log("=== Wiki Page Analysis ===");
+            for (const page of wikipages) {
+                if (page.path) {
+                    console.log(`Checking page: "${page.path}"`);
+                    
+                    // Check if page is under our managed path (handle both slash variations)
+                    const isManaged = page.path.startsWith(managedPathPrefix) || 
+                                    page.path.startsWith(managedPathPrefixNoSlash);
+                    
+                    if (isManaged) {
+                        managedPages.push(page.path);
+                        console.log(`  - MANAGED: Under our managed path`);
+                        if (!expectedPages.has(page.path)) {
+                            orphanedPages.push(page.path);
+                            console.log(`  - ORPHANED: No corresponding markdown file`);
+                        } else {
+                            console.log(`  - KEPT: Has corresponding markdown file`);
+                        }
+                    } else {
+                        console.log(`  - IGNORED: Outside managed path`);
+                        console.log(`    Expected to start with: "${managedPathPrefix}" or "${managedPathPrefixNoSlash}"`);
+                    }
+                } else {
+                    console.log(`Skipping page with no path: ${JSON.stringify(page)}`);
+                }
+            }
+            
+            console.log(`\nSummary:`);
+            console.log(`- Total wiki pages: ${wikipages.length}`);
+            console.log(`- Pages under managed path: ${managedPages.length}`);
+            console.log(`- Expected pages from markdown: ${expectedPages.size}`);
+            console.log(`- Orphaned pages to delete: ${orphanedPages.length}`);
+            
+            if (managedPages.length > 0) {
+                console.log(`\nManaged pages:`);
+                managedPages.forEach(page => console.log(`  - ${page}`));
+            }
+            
+            if (orphanedPages.length === 0) {
+                console.log("No orphaned wiki pages found.");
+                return;
+            }
+            
+            console.log(`\nFound ${orphanedPages.length} orphaned wiki pages to delete:`);
+            orphanedPages.forEach(page => console.log(`  - ${page}`));
+            
+            // Delete orphaned pages
+            for (const pagePath of orphanedPages) {
+                try {
+                    console.log(`Deleting orphaned wiki page: ${pagePath}`);
+                    await wikiPageApi.DeletePage(wikiUrl, pagePath, token);
+                    console.log(`Successfully deleted: ${pagePath}`);
+                } catch (error) {
+                    console.error(`Failed to delete page ${pagePath}:`, (error as Error).message);
+                    if (error && typeof error === 'object' && 'response' in error) {
+                        const axiosError = error as any;
+                        console.error(`HTTP Status: ${axiosError.response?.status}`);
+                        console.error(`Error details:`, axiosError.response?.data);
+                    }
+                }
+            }
+        }
+
+        // Collect expected wiki pages before processing
+        const expectedWikiPages = new Set<string>();
+        collectExpectedWikiPages(wikiSource, expectedWikiPages);
+        
+        console.log(`Expected wiki pages (${expectedWikiPages.size}):`);
+        expectedWikiPages.forEach(page => console.log(`  - ${page}`));
+
         // Process all .md files in the wikiSource directory
         await processMdFiles(wikiSource);
 
         console.log("All markdown files processed successfully.");
+
+        // Delete orphaned wiki pages (only if enabled)
+        if (deleteOrphanedPages) {
+            console.log("Delete orphaned pages is enabled. Checking for pages to delete...");
+            await deleteOrphanedWikiPages(expectedWikiPages);
+        } else {
+            console.log("Delete orphaned pages is disabled. Skipping orphaned page deletion.");
+        }
 
     } catch (error) {
         console.error('🚨 Error:', error);
