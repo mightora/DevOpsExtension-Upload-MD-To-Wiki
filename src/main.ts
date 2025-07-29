@@ -283,7 +283,7 @@ async function main() {
                 } else {
                     console.log(`Page not found: ${currentPath}. Creating the page.`);
                     try {
-                        const content = `# ${part}\n\n[[ _TOSP_ ]]`;
+                        const content = `# ${part}\n \n [[ _TOSP_ ]] `;
                         await wikiPageApi.CreatePage(wikiUrl, currentPath, content, token);
                         console.log(`Page created at ${currentPath}`);
                     } catch (error) {
@@ -308,7 +308,7 @@ async function main() {
         
             console.log(`Uploading image to URL: ${url}`);
             console.log(`Absolute path of the image: ${imagePath}`);
-            console.log(`Upload Image Data: ${base64ImageData}`);
+            console.log(`Upload Image Data`);
             console.log(`Try and upload image: ${imageName}`);
         
             const response = await axios.put(url, base64ImageData, {

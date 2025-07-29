@@ -13,6 +13,10 @@ This DevOps extension allows you to move markdown (`.md`) files held in an Azure
 - Automatically upload markdown files from a specified source directory in your repository to a specified destination in your Azure DevOps Wiki.
 - Supports creating and updating wiki pages.
 - Handles nested directories and maintains the directory structure in the wiki.
+- **Image Upload Support**: Automatically uploads images referenced in markdown files as wiki attachments.
+- **Header Message**: Add a customizable header message to all uploaded pages (e.g., "DO NOT EDIT DIRECTLY - EDIT IN REPO").
+- **Page Links**: Optionally include direct links to wiki pages at the bottom of each page.
+- **Orphaned Page Cleanup**: Automatically delete wiki pages when their corresponding markdown files are removed from the repository (optional, disabled by default for safety).
 
 ## Prerequisites
 
@@ -40,15 +44,21 @@ Add the following task to your Azure DevOps pipeline YAML file:
     MDVersion: '$(Build.BuildNumber)'
     MDTitle: 'Markdown title'
     WikiDestination: 'UploadedFromPipeline'
+    HeaderMessage: '<mark>DO NOT EDIT DIRECTLY - EDIT IN REPO</mark>'
+    IncludePageLink: false
+    DeleteOrphanedPages: false
 ```
 
 ### Parameters
-- ADOBaseUrl: The base URL of your Azure DevOps organization.
-- wikiSource: The source directory in your repository containing the markdown files.
-- MDRepositoryName: The name of your repository.
-- MDVersion: The version number or build number.
-- MDTitle: The title for the markdown files.
-- WikiDestination: The destination path in the wiki where the markdown files will be uploaded.
+- **ADOBaseUrl**: The base URL of your Azure DevOps organization.
+- **wikiSource**: The source directory in your repository containing the markdown files.
+- **MDRepositoryName**: The name of your repository.
+- **MDVersion**: The version number or build number.
+- **MDTitle**: The title for the markdown files.
+- **WikiDestination**: The destination path in the wiki where the markdown files will be uploaded.
+- **HeaderMessage** *(optional)*: A header message to be added to the top of every wiki page. Useful for adding disclaimers like "DO NOT EDIT DIRECTLY - EDIT IN REPO".
+- **IncludePageLink** *(optional)*: When enabled, adds a "Link to this page" at the bottom of each wiki page for easy navigation.
+- **DeleteOrphanedPages** *(optional)*: When enabled, automatically deletes wiki pages that no longer have corresponding markdown files in the source repository. **Use with caution** - defaults to `false` for safety.
 
 ### Example
 
@@ -70,8 +80,62 @@ steps:
     MDVersion: '$(Build.BuildNumber)'
     MDTitle: 'Markdown title'
     WikiDestination: 'UploadedFromPipeline'
+    HeaderMessage: '<mark>DO NOT EDIT DIRECTLY - EDIT IN REPO</mark>'
+    IncludePageLink: true
+    DeleteOrphanedPages: false
   displayName: 'Upload Markdown to Wiki'
 ```
+
+### Advanced Configuration Examples
+
+**Basic Setup** (minimal configuration):
+```yaml
+- task: mightora-UploadMDToWiki@1
+  inputs:
+    ADOBaseUrl: '$(System.CollectionUri)'
+    wikiSource: '$(Build.SourcesDirectory)/docs'
+    MDRepositoryName: '$(Build.Repository.Name)'
+    WikiDestination: 'Documentation'
+```
+
+**Full Feature Setup** (with all options enabled):
+```yaml
+- task: mightora-UploadMDToWiki@1
+  inputs:
+    ADOBaseUrl: '$(System.CollectionUri)'
+    wikiSource: '$(Build.SourcesDirectory)/docs'
+    MDRepositoryName: '$(Build.Repository.Name)'
+    MDVersion: '$(Build.BuildNumber)'
+    MDTitle: 'Project Documentation'
+    WikiDestination: 'Documentation'
+    HeaderMessage: |
+      <mark>⚠️ DO NOT EDIT DIRECTLY - EDIT IN REPOSITORY</mark>
+      
+      This page is automatically generated from the repository. Please make changes in the source files.
+    IncludePageLink: true
+    DeleteOrphanedPages: true
+  displayName: 'Sync Documentation to Wiki'
+```
+
+## Safety & Best Practices
+
+### Orphaned Page Deletion
+The `DeleteOrphanedPages` feature is powerful but should be used with caution:
+- **Default**: Disabled (`false`) for safety
+- **When to enable**: Only when you're confident about your markdown file organization
+- **What it does**: Deletes wiki pages that no longer have corresponding `.md` files in your repository
+- **Scope**: Only affects pages under your specified `WikiDestination/RepositoryName` path
+
+### Recommended Workflow
+1. **Start with `DeleteOrphanedPages: false`** to test the upload functionality
+2. **Use `HeaderMessage`** to clearly indicate that pages are auto-generated
+3. **Enable `IncludePageLink`** for easy navigation between wiki and source
+4. **Only enable `DeleteOrphanedPages`** after confirming the extension works as expected
+
+### Image Handling
+- Images referenced in markdown files are automatically uploaded as wiki attachments
+- Relative image paths in markdown files are supported
+- Images are given unique names to prevent conflicts
 
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.
