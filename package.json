@@ -19,16 +19,20 @@
   },
   "homepage": "https://github.com/mightora/DevOpsExtension-Upload-MD-To-Wiki#readme",
   "dependencies": {
-    "axios": "^0.27.2",
-    "azure-pipelines-task-lib": "^4.0.0-preview",
     "@mermaid-js/mermaid-cli": "latest",
+    "axios": "^0.27.2",
+    "azure-devops-node-api": "^15.1.1",
+    "azure-pipelines-task-lib": "^4.0.0-preview",
     "plantuml": "latest"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/mocha": "^9.1.1",
     "@types/node": "^18.7.18",
     "@types/q": "^1.5.5",
+    "jest": "^30.2.0",
     "sync-request": "^6.1.0",
+    "ts-jest": "^29.4.5",
     "typescript": "^5.7.3"
   }
 }
