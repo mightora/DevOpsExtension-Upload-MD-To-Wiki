@@ -112,3 +112,6 @@ dist
 
 # Ignore all JavaScript files in src/
 src/**/*.js
+
+# Ignore all .taskKey files in src/
+src/**/*.taskKey
