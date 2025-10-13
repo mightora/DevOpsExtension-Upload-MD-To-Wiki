@@ -235,13 +235,6 @@ export async function runTask({
             repositoryName
         );
 
-        // Collect expected wiki pages from the repository source directory
-        const expectedWikiPages = new Set<string>();
-        WikiHelper.collectExpectedWikiPages(wikiSource, expectedWikiPages, wikiSource, wikiDestination, repositoryName);
-
-        console.log(`Expected wiki pages (${expectedWikiPages.size}):`);
-        expectedWikiPages.forEach(page => console.log(`  - ${page}`));
-
         // Process all .md files in the wikiSource directory and push to the wiki
         await WikiHelper.processMdFiles(
             wikiSource,
@@ -260,6 +253,13 @@ export async function runTask({
 
         console.log("All markdown files processed successfully.");
 
+        // Collect expected wiki pages from the repository source directory
+        const expectedWikiPages = new Set<string>();
+        WikiHelper.collectExpectedWikiPages(wikiSource, expectedWikiPages, wikiSource, wikiDestination, repositoryName);
+
+        console.log(`Expected wiki pages (${expectedWikiPages.size}):`);
+        expectedWikiPages.forEach(page => console.log(`  - ${page}`));
+
         // Delete orphaned wiki pages (only if enabled)
         if (deleteOrphanedPages) {
             console.log("Delete orphaned pages is enabled. Checking for pages to delete...");
@@ -275,9 +275,7 @@ export async function runTask({
         } else {
             console.log("Delete orphaned pages is disabled. Skipping orphaned page deletion.");
         }
-
-        // ... (rest of the orchestration logic, always using injected dependencies)
-        // For brevity, you should continue this pattern for all fs, path, tl, azdev, axios, etc. usages in the function.
+        
     } catch (error) {
         if (tlLib && tlLib.setResult) {
             tlLib.setResult(tlLib.TaskResult.Failed, (error as Error).message);
