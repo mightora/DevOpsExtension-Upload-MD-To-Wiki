@@ -12,32 +12,8 @@ import * as WorkItemTrackingApi from 'azure-devops-node-api/WorkItemTrackingApi'
 import * as WorkItemTrackingInterfaces from 'azure-devops-node-api/interfaces/WorkItemTrackingInterfaces';
 import axios from 'axios';
 const https = require('https');
-import { WikiHelperFunctions } from './wiki_helper_functions';
-import { WikiPageApi } from './wiki_pages_api_service';
-
-// Include the provided code here
-export interface IPage {
-    tittle: string;
-    description: string;
-    releaseNumber: string;
-    badges: string[];
-    helpLink: string;
-    releaseDate: string;
-}
-
-export interface IWorkItemDetail {
-    id: number;
-    type: string;
-    url: string;
-}
-
-export interface IGroupWorkItem {
-    key: string;
-    workItems: IWorkItemDetail[];
-}
-
-
-
+import { WikiHelperFunctions } from './services/WikiPages/wiki_helper_functions';
+import { WikiPageApi } from './services/WikiPages/wiki_pages_api_service';
 
 
 // Refactored orchestration logic for testability
