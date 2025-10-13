@@ -238,6 +238,150 @@ function collectExpectedWikiPages(dir: string, expectedPages: Set<string>, wikiS
     }
 }
 
+async function processMdFiles(
+    dir: string,
+    wikiSource: string,
+    wikiDestination: string,
+    repositoryName: string,
+    headerMessage: string,
+    includePageLink: boolean,
+    orgUrl: string,
+    project: string,
+    wikiUrl: string,
+    wikiPageApi: WikiPageApi,
+    token: string,
+    wikipages: WikiInterfaces.WikiPage[]
+) {
+    const files = fs.readdirSync(dir);
+    for (const file of files) {
+        const filePath = path.join(dir, file);
+        if (fs.statSync(filePath).isDirectory()) {
+            await processMdFiles(filePath, wikiSource, wikiDestination, repositoryName, headerMessage, includePageLink, orgUrl, project, wikiUrl, wikiPageApi, token, wikipages);
+        } else if (file.endsWith('.md')) {
+            console.log(`Markdown File: ${filePath}`);
+            let content = fs.readFileSync(filePath, 'utf8');
+
+            // Remove \newpage from the content
+            content = content.replace(/\\newpage/g, '');
+
+            // Prepend the header message to the content
+            if (headerMessage) {
+                content = `${headerMessage}\n\n${content}`;
+            }
+
+            const relativePath = path.relative(wikiSource, filePath).replace(/\\/g, '/');
+            const wikiPagePath = `${wikiDestination}/${repositoryName}/${relativePath.replace(/\.md$/, '')}`;
+
+            // Append the page link if enabled
+            if (includePageLink) {
+                const pageLink = generateWikiPageLink(orgUrl, project, wikiPagePath);
+                content = `${content}\n\n---\n\n**[Link to this page](${pageLink})**`;
+            }
+
+            console.log(`Ensuring path exists for: ${wikiPagePath}`);
+            await ensurePathExists(wikipages, wikiPageApi, wikiUrl, path.dirname(wikiPagePath), token, orgUrl, project, repositoryName);
+
+            // Identify images in the markdown content
+            const imageRegex = /!\[.*?\]\((.*?)\)/g;
+            let match;
+            const images = [];
+            while ((match = imageRegex.exec(content)) !== null) {
+                console.log(`Image found: ${match[1]}`);
+                images.push(match[1]);
+            }
+
+            // Upload images as attachments and update markdown content
+            for (const image of images) {
+                const imagePath = path.join(dir, image);
+                if (fs.existsSync(imagePath)) {
+                    const imageName = path.basename(imagePath);
+                    const attachmentUrl = await uploadImageAsAttachment(wikiPageApi, wikiUrl, imagePath, token);
+                    content = content.replace(image, attachmentUrl);
+                    console.log(`Uploaded image: ${imageName} to ${attachmentUrl}`);
+                } else {
+                    console.error(`Image file not found: ${imagePath}`);
+                }
+            }
+
+            console.log(`Attempting to create or update wiki page at: ${wikiPagePath}`);
+
+            try {
+                const { headers } = await wikiPageApi.getPage(wikiUrl, wikiPagePath, token);
+                const etag = headers['etag'];
+                console.log(`ETag for ${wikiPagePath} is: ${etag}`);
+                //update page
+                const updateResponse = await wikiPageApi.UpdatePage(wikiUrl, wikiPagePath, content, token, etag);
+                if (!updateResponse) {
+                    throw new Error(`Failed to update wiki page: No response data.`);
+                }
+            } catch (error) {
+                if (axios.isAxiosError(error) && error.response?.status === 404) {
+                    const typeKey = (error.response.data as any)?.typeKey;
+                    if (typeKey === "WikiPageNotFoundException") {
+                        console.log(`WikiPageNotFoundException: Page not found at ${wikiPagePath}`);
+                        console.error(`[A] Trying to create new page for ${wikiPagePath}:`);
+                        const createResponse = await wikiPageApi.CreatePage(wikiUrl, wikiPagePath, content, token);
+                        if (!createResponse) {
+                            throw new Error(`Failed to create wiki page: No response data.`);
+                        }
+                        console.log(`Page Created: ${wikiPagePath}`);
+                    } else {
+                        console.error(`Failed to retrieve ETag for ${wikiPagePath}:`, (error as Error).message);
+                        console.error(`[B] Trying to create new page for ${wikiPagePath}:`);
+                        const createResponse = await wikiPageApi.CreatePage(wikiUrl, wikiPagePath, content, token);
+                        if (!createResponse) {
+                            throw new Error(`Failed to create wiki page: No response data.`);
+                        }
+                    }
+                } else {
+                    console.error(`Failed to retrieve ETag for ${wikiPagePath}:`, (error as Error).message);
+                    console.error(`[C] Trying to create new page for ${wikiPagePath}:`);
+                    const createResponse = await wikiPageApi.CreatePage(wikiUrl, wikiPagePath, content, token);
+                    if (!createResponse) {
+                        throw new Error(`Failed to create wiki page: No response data.`);
+                    }
+                }
+            }
+        }
+    }
+}
+
+function generateWikiPageLink(orgUrl: string, project: string, wikiPagePath: string): string {
+    const cleanPath = wikiPagePath.startsWith('/') ? wikiPagePath.substring(1) : wikiPagePath;
+    const encodedPath = encodeURIComponent(cleanPath);
+    return `${orgUrl}${project}/_wiki/wikis/${project}.wiki?pagePath=%2F${encodedPath}`;
+}
+
+
+async function uploadImageAsAttachment(wikiPageApi: WikiPageApi, wikiUrl: string, imagePath: string, token: string): Promise<string> {
+    const imageName = path.basename(imagePath);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const uniqueImageName = `${timestamp}-${imageName}`;
+    const url = `${wikiUrl}/attachments?name=${uniqueImageName}&api-version=6.0`;
+    const imageData = fs.readFileSync(imagePath);
+    const base64ImageData = imageData.toString('base64');
+
+    console.log(`Uploading image to URL: ${url}`);
+    console.log(`Absolute path of the image: ${imagePath}`);
+    console.log(`Upload Image Data`);
+    console.log(`Try and upload image: ${imageName}`);
+
+    const response = await axios.put(url, base64ImageData, {
+        headers: {
+            ...wikiPageApi.getHeaders(token),
+            'Content-Type': 'application/octet-stream'
+        }
+    }).then((response) => {
+        return response.data.url;
+    }).catch((error) => {
+        console.error(`Failed to upload image: ${uniqueImageName}`, error);
+        throw new Error(`Failed to upload image: ${uniqueImageName}`);
+    });
+
+    const attachmentPath = `/.attachments/${uniqueImageName}`;
+    return attachmentPath;
+}
+
 // Refactored orchestration logic for testability
 export async function runTask({
     tlLib = tl,
@@ -310,13 +454,28 @@ export async function runTask({
             repositoryName
         );
 
-        // Collect expected wiki pages from the source directory
+        // Collect expected wiki pages from the repository source directory
          const expectedWikiPages = new Set<string>();
         collectExpectedWikiPages(wikiSource, expectedWikiPages, wikiSource, wikiDestination, repositoryName);
 
         console.log(`Expected wiki pages (${expectedWikiPages.size}):`);
         expectedWikiPages.forEach(page => console.log(`  - ${page}`));
 
+        // Process all .md files in the wikiSource directory and push tonthe wiki
+        await processMdFiles(
+            wikiSource,
+            wikiSource,
+            wikiDestination,
+            repositoryName,
+            headerMessage,
+            includePageLink,
+            orgUrl,
+            project,
+            wikiUrl,
+            wikiPageApi,
+            token,
+            wikipages
+        );
 
         // ... (rest of the orchestration logic, always using injected dependencies)
         // For brevity, you should continue this pattern for all fs, path, tl, azdev, axios, etc. usages in the function.
