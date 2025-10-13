@@ -86,6 +86,7 @@ describe('runTask', () => {
         BUILD_BUILDID: '1',
       }
     })).resolves.not.toThrow();
+    debugger;
     expect(mockSetResourcePath).toHaveBeenCalled();
     expect(mockSetResult).not.toHaveBeenCalledWith('Failed', expect.anything());
   });
@@ -104,6 +105,7 @@ describe('runTask', () => {
         BUILD_BUILDID: '1',
       }
     });
+    debugger;
     expect(mockSetResult).toHaveBeenCalledWith('Failed', expect.any(String));
   });
 });

@@ -189,6 +189,36 @@ async function fetchDeveloperMessage(): Promise<string> {
     });
 }
 
+// --- Top-level functions extracted from main ---
+async function ensurePathExists(wikipages: WikiInterfaces.WikiPage[], wikiPageApi: WikiPageApi, wikiUrl: string, pathStr: string, token: string, orgUrl: string, project: string, repositoryName: string) {
+    const parts = pathStr.split('/');
+    let currentPath = '';
+    for (const part of parts) {
+        currentPath += `/${part}`;
+        let pageExists = wikipages.some(page => page.path === currentPath);
+        if (pageExists) {
+            console.log(`Page already exists: ${currentPath}`);
+            console.log(`Page already exists get etag: ${orgUrl}/${project}/_apis/wiki/wikis/${repositoryName}/pages?path=${currentPath}&api-version=7.1`);
+            try {
+                const { headers } = await wikiPageApi.getPage(wikiUrl, currentPath, token);
+                const etag = headers['etag'];
+                console.log(`ETag for ${currentPath}: ${etag}`);
+            } catch (error) {
+                console.error(`Failed to retrieve ETag for ${currentPath}:`, (error as Error).message);
+            }
+        } else {
+            console.log(`Page not found: ${currentPath}. Creating the page.`);
+            try {
+                const content = `# ${part}\n \n [[ _TOSP_ ]] `;
+                await wikiPageApi.CreatePage(wikiUrl, currentPath, content, token);
+                console.log(`Page created at ${currentPath}`);
+            } catch (error) {
+                console.error(`Failed to create page at ${currentPath}:`, (error as Error).message);
+                throw new Error(`Failed to create page at ${currentPath}. Please check permissions.`);
+            }
+        }
+    }
+}
 
 // Refactored orchestration logic for testability
 export async function runTask({
@@ -207,10 +237,11 @@ export async function runTask({
     WikiPageApiClass = WikiPageApi,
     env = process.env
 } = {}) {
+    debugger;
     // Use injected dependencies everywhere below
     try {
         tlLib.setResourcePath(pathLib.join(__dirname, 'task.json'));
-
+        debugger;
         // Getting input values
         let orgUrl: string = tlLib.getInput('ADOBaseUrl', true);
         let repositoryName: string = tlLib.getInput("MDRepositoryName", true);
@@ -248,21 +279,18 @@ export async function runTask({
         let wikiPageApi = new WikiPageApiClass();
         let wikipages = await wikiPageApi.getPages(wikiUrl, 100, token);
 
-        async function ensurePathExists(wikiUrl: string, path: string, token: string) {
-            const parts = path.split('/');
-            let currentPath = '';
-            for (const part of parts) {
-                currentPath += `/${part}`;
-                let pageExists = wikipages.some(page => page.path === currentPath);
-                if (!pageExists) {
-                    const content = `# ${part}\n \n [[ _TOSP_ ]] `;
-                    await wikiPageApi.CreatePage(wikiUrl, currentPath, content, token);
-                }
-            }
-        }
 
         // Ensure the path exists
-        await ensurePathExists(wikiUrl, `${wikiDestination}/${repositoryName}`, token);
+        await ensurePathExists(
+            wikipages,
+            wikiPageApi,
+            wikiUrl,
+            `${wikiDestination}/${repositoryName}`,
+            token,
+            orgUrl,
+            project,
+            repositoryName
+        );
 
         // ... (rest of the orchestration logic, always using injected dependencies)
         // For brevity, you should continue this pattern for all fs, path, tl, azdev, axios, etc. usages in the function.
@@ -277,6 +305,7 @@ export async function runTask({
 
 // Keep the original main() for CLI usage
 async function main() {
+    debugger;
     await runTask();
 }
 

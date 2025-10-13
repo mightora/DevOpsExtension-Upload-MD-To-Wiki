@@ -48,6 +48,9 @@ jspm_packages/
 # TypeScript v1 declaration files
 typings/
 
+# VS Code settings
+.vscode/launch.json
+
 # TypeScript cache
 *.tsbuildinfo
 
