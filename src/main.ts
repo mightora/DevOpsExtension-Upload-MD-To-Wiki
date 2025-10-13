@@ -382,6 +382,77 @@ async function uploadImageAsAttachment(wikiPageApi: WikiPageApi, wikiUrl: string
     return attachmentPath;
 }
 
+async function deleteOrphanedWikiPages(
+    expectedPages: Set<string>,
+    wikipages: WikiInterfaces.WikiPage[],
+    wikiDestination: string,
+    repositoryName: string,
+    wikiPageApi: WikiPageApi,
+    wikiUrl: string,
+    token: string
+) {
+    console.log("Checking for orphaned wiki pages to delete...");
+    const managedPathPrefix = `/${wikiDestination}/${repositoryName}/`;
+    const managedPathPrefixNoSlash = `${wikiDestination}/${repositoryName}/`;
+    console.log(`Managed path prefix (with slash): "${managedPathPrefix}"`);
+    console.log(`Managed path prefix (no slash): "${managedPathPrefixNoSlash}"`);
+    const orphanedPages: string[] = [];
+    const managedPages: string[] = [];
+    console.log("=== Wiki Page Analysis ===");
+    for (const page of wikipages) {
+        if (page.path) {
+            console.log(`Checking page: "${page.path}"`);
+            const isManaged = page.path.startsWith(managedPathPrefix) || page.path.startsWith(managedPathPrefixNoSlash);
+            if (isManaged) {
+                managedPages.push(page.path);
+                console.log(`  - MANAGED: Under our managed path`);
+                if (!expectedPages.has(page.path)) {
+                    orphanedPages.push(page.path);
+                    console.log(`  - ORPHANED: No corresponding markdown file`);
+                } else {
+                    console.log(`  - KEPT: Has corresponding markdown file`);
+                }
+            } else {
+                console.log(`  - IGNORED: Outside managed path`);
+                console.log(`    Expected to start with: "${managedPathPrefix}" or "${managedPathPrefixNoSlash}"`);
+            }
+        } else {
+            console.log(`Skipping page with no path: ${JSON.stringify(page)}`);
+        }
+    }
+    console.log(`\nSummary:`);
+    console.log(`- Total wiki pages: ${wikipages.length}`);
+    console.log(`- Pages under managed path: ${managedPages.length}`);
+    console.log(`- Expected pages from markdown: ${expectedPages.size}`);
+    console.log(`- Orphaned pages to delete: ${orphanedPages.length}`);
+    if (managedPages.length > 0) {
+        console.log(`\nManaged pages:`);
+        managedPages.forEach(page => console.log(`  - ${page}`));
+    }
+    if (orphanedPages.length === 0) {
+        console.log("No orphaned wiki pages found.");
+        return;
+    }
+    console.log(`\nFound ${orphanedPages.length} orphaned wiki pages to delete:`);
+    orphanedPages.forEach(page => console.log(`  - ${page}`));
+    for (const pagePath of orphanedPages) {
+        try {
+            console.log(`Deleting orphaned wiki page: ${pagePath}`);
+            await wikiPageApi.DeletePage(wikiUrl, pagePath, token);
+            console.log(`Successfully deleted: ${pagePath}`);
+        } catch (error) {
+            console.error(`Failed to delete page ${pagePath}:`, (error as Error).message);
+            if (error && typeof error === 'object' && 'response' in error) {
+                const axiosError = error as any;
+                console.error(`HTTP Status: ${axiosError.response?.status}`);
+                console.error(`Error details:`, axiosError.response?.data);
+            }
+        }
+    }
+}
+
+
+
 // Refactored orchestration logic for testability
 export async function runTask({
     tlLib = tl,
@@ -461,7 +532,7 @@ export async function runTask({
         console.log(`Expected wiki pages (${expectedWikiPages.size}):`);
         expectedWikiPages.forEach(page => console.log(`  - ${page}`));
 
-        // Process all .md files in the wikiSource directory and push tonthe wiki
+        // Process all .md files in the wikiSource directory and push to the wiki
         await processMdFiles(
             wikiSource,
             wikiSource,
@@ -476,6 +547,24 @@ export async function runTask({
             token,
             wikipages
         );
+
+        console.log("All markdown files processed successfully.");
+
+       // Delete orphaned wiki pages (only if enabled)
+        if (deleteOrphanedPages) {
+            console.log("Delete orphaned pages is enabled. Checking for pages to delete...");
+            await deleteOrphanedWikiPages(
+                expectedWikiPages,
+                wikipages,
+                wikiDestination,
+                repositoryName,
+                wikiPageApi,
+                wikiUrl,
+                token
+            );
+        } else {
+            console.log("Delete orphaned pages is disabled. Skipping orphaned page deletion.");
+        }
 
         // ... (rest of the orchestration logic, always using injected dependencies)
         // For brevity, you should continue this pattern for all fs, path, tl, azdev, axios, etc. usages in the function.
