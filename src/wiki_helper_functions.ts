@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import axios from 'axios';
-import { WikiPageApi } from './main'; // Adjust import if WikiPageApi is moved
+import { WikiPageApi } from './wiki_pages_api_service';
 import * as WikiInterfaces from 'azure-devops-node-api/interfaces/WikiInterfaces';
 
 export class WikiHelperFunctions {
