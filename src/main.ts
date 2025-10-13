@@ -220,6 +220,24 @@ async function ensurePathExists(wikipages: WikiInterfaces.WikiPage[], wikiPageAp
     }
 }
 
+function collectExpectedWikiPages(dir: string, expectedPages: Set<string>, wikiSource: string, wikiDestination: string, repositoryName: string) {
+    console.log(`Scanning directory for markdown files: ${dir}`);
+    const files = fs.readdirSync(dir);
+    for (const file of files) {
+        const filePath = path.join(dir, file);
+        if (fs.statSync(filePath).isDirectory()) {
+            collectExpectedWikiPages(filePath, expectedPages, wikiSource, wikiDestination, repositoryName);
+        } else if (file.endsWith('.md')) {
+            const relativePath = path.relative(wikiSource, filePath).replace(/\\/g, '/');
+            const wikiPagePath = `/${wikiDestination}/${repositoryName}/${relativePath.replace(/\.md$/, '')}`;
+            console.log(`Found markdown file: ${filePath}`);
+            console.log(`  - Relative path: ${relativePath}`);
+            console.log(`  - Expected wiki path: ${wikiPagePath}`);
+            expectedPages.add(wikiPagePath);
+        }
+    }
+}
+
 // Refactored orchestration logic for testability
 export async function runTask({
     tlLib = tl,
@@ -291,6 +309,14 @@ export async function runTask({
             project,
             repositoryName
         );
+
+        // Collect expected wiki pages from the source directory
+         const expectedWikiPages = new Set<string>();
+        collectExpectedWikiPages(wikiSource, expectedWikiPages, wikiSource, wikiDestination, repositoryName);
+
+        console.log(`Expected wiki pages (${expectedWikiPages.size}):`);
+        expectedWikiPages.forEach(page => console.log(`  - ${page}`));
+
 
         // ... (rest of the orchestration logic, always using injected dependencies)
         // For brevity, you should continue this pattern for all fs, path, tl, azdev, axios, etc. usages in the function.
