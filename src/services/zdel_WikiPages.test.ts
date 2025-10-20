@@ -1,4 +1,4 @@
-import { WikiPageApi } from './WikiPages';
+import { WikiPageApi } from './zdel_WikiPages';
 import axios from 'axios';
 
 jest.mock('axios');

@@ -4,7 +4,7 @@ import * as azdev from "azure-devops-node-api";
 import * as WikiApi from "azure-devops-node-api/WikiApi";
 import * as WikiInterfaces from "azure-devops-node-api/interfaces/WikiInterfaces";
 import * as lim from "azure-devops-node-api/interfaces/LocationsInterfaces";
-import * as WikiPageApi from './services/WikiPages'
+import * as WikiPageApi from './services/zdel_WikiPages'
 import * as ba from "azure-devops-node-api/BuildApi";
 import * as bi from "azure-devops-node-api/interfaces/BuildInterfaces";
 import * as WorkItemTrackingApi from 'azure-devops-node-api/WorkItemTrackingApi';
