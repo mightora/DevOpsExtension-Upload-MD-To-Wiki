@@ -12,7 +12,7 @@ import * as WorkItemTrackingApi from 'azure-devops-node-api/WorkItemTrackingApi'
 import * as WorkItemTrackingInterfaces from 'azure-devops-node-api/interfaces/WorkItemTrackingInterfaces';
 import axios from 'axios';
 const https = require('https');
-import { WikiHelperFunctions } from './services/WikiPages/wiki_helper_functions';
+import { WikiHelperFunctions, ExpectedWikiPage } from './services/WikiPages/wiki_helper_functions';
 import { WikiPageApi } from './services/WikiPages/wiki_pages_api_service';
 
 
@@ -108,11 +108,11 @@ export async function runTask({
         console.log("All markdown files processed successfully.");
 
         // Collect expected wiki pages from the repository source directory
-        const expectedWikiPages = new Set<string>();
+        const expectedWikiPages: ExpectedWikiPage[] = [];
         WikiHelper.collectExpectedWikiPages(wikiSource, expectedWikiPages, wikiSource, wikiDestination, repositoryName);
 
-        console.log(`Expected wiki pages (${expectedWikiPages.size}):`);
-        expectedWikiPages.forEach(page => console.log(`  - ${page}`));
+        console.log(`Expected wiki pages (${expectedWikiPages.length}):`);
+        expectedWikiPages.forEach(page => console.log(`  - ${page.WikiPagePath} (${page.IsDirectory ? 'Directory' : 'File'})`));
 
         // Delete orphaned wiki pages (only if enabled)
         if (deleteOrphanedPages) {
@@ -141,8 +141,12 @@ export async function runTask({
 
 // Keep the original main() for CLI usage
 async function main() {
-    debugger;
-    await runTask();
+    try {
+        debugger;
+        await runTask();
+    } catch (error) {
+        console.error('Error in main():', (error as Error).message);
+    }
 }
 
 main();

@@ -4,6 +4,11 @@ import axios from 'axios';
 import { WikiPageApi } from './wiki_pages_api_service';
 import * as WikiInterfaces from 'azure-devops-node-api/interfaces/WikiInterfaces';
 
+export interface ExpectedWikiPage {
+    WikiPagePath: string;
+    IsDirectory: boolean;
+}
+
 export class WikiHelperFunctions {
     static async fetchDeveloperMessage(https: any): Promise<string> {
         const url = 'https://developer-message.mightora.io/api/HttpTrigger?appname=mightora-UploadMDToWiki';
@@ -61,20 +66,32 @@ export class WikiHelperFunctions {
         }
     }
 
-    static collectExpectedWikiPages(dir: string, expectedPages: Set<string>, wikiSource: string, wikiDestination: string, repositoryName: string) {
+    static collectExpectedWikiPages(dir: string, expectedPages: ExpectedWikiPage[], wikiSource: string, wikiDestination: string, repositoryName: string) {
         console.log(`Scanning directory for markdown files: ${dir}`);
         const files = fs.readdirSync(dir);
         for (const file of files) {
             const filePath = path.join(dir, file);
             if (fs.statSync(filePath).isDirectory()) {
+                const relativePath = path.relative(wikiSource, filePath).replace(/\\/g, '/');
+                const wikiPagePath = `/${wikiDestination}/${repositoryName}/${relativePath}`;
+                expectedPages.push({
+                    WikiPagePath: wikiPagePath,
+                    IsDirectory: true
+                });
+                console.log(`Found directory: ${filePath}`);
+                console.log(`  - Relative path: ${relativePath}`);
+                console.log(`  - Expected wiki path: ${wikiPagePath} (Directory)`);
                 WikiHelperFunctions.collectExpectedWikiPages(filePath, expectedPages, wikiSource, wikiDestination, repositoryName);
             } else if (file.endsWith('.md')) {
                 const relativePath = path.relative(wikiSource, filePath).replace(/\\/g, '/');
                 const wikiPagePath = `/${wikiDestination}/${repositoryName}/${relativePath.replace(/\.md$/, '')}`;
+                expectedPages.push({
+                    WikiPagePath: wikiPagePath,
+                    IsDirectory: false
+                });
                 console.log(`Found markdown file: ${filePath}`);
                 console.log(`  - Relative path: ${relativePath}`);
-                console.log(`  - Expected wiki path: ${wikiPagePath}`);
-                expectedPages.add(wikiPagePath);
+                console.log(`  - Expected wiki path: ${wikiPagePath} (File)`);
             }
         }
     }
@@ -205,7 +222,7 @@ export class WikiHelperFunctions {
     }
 
     static async deleteOrphanedWikiPages(
-        expectedPages: Set<string>,
+        expectedPages: ExpectedWikiPage[],
         wikipages: WikiInterfaces.WikiPage[],
         wikiDestination: string,
         repositoryName: string,
@@ -228,11 +245,12 @@ export class WikiHelperFunctions {
                 if (isManaged) {
                     managedPages.push(page.path);
                     console.log(`  - MANAGED: Under our managed path`);
-                    if (!expectedPages.has(page.path)) {
+                    const expectedPage = expectedPages.find(ep => ep.WikiPagePath === page.path || ep.IsDirectory);
+                    if (!expectedPage) {
                         orphanedPages.push(page.path);
                         console.log(`  - ORPHANED: No corresponding markdown file`);
                     } else {
-                        console.log(`  - KEPT: Has corresponding markdown file`);
+                        console.log(`  - KEPT: Has corresponding markdown file (${expectedPage.IsDirectory ? 'Directory' : 'File'})`);
                     }
                 } else {
                     console.log(`  - IGNORED: Outside managed path`);
@@ -245,7 +263,7 @@ export class WikiHelperFunctions {
         console.log(`\nSummary:`);
         console.log(`- Total wiki pages: ${wikipages.length}`);
         console.log(`- Pages under managed path: ${managedPages.length}`);
-        console.log(`- Expected pages from markdown: ${expectedPages.size}`);
+        console.log(`- Expected pages from markdown: ${expectedPages.length}`);
         console.log(`- Orphaned pages to delete: ${orphanedPages.length}`);
         if (managedPages.length > 0) {
             console.log(`\nManaged pages:`);
