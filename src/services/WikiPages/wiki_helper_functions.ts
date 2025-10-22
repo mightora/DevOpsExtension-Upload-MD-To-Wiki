@@ -113,80 +113,118 @@ export class WikiHelperFunctions {
         const files = fs.readdirSync(dir);
         for (const file of files) {
             const filePath = path.join(dir, file);
+            
             if (fs.statSync(filePath).isDirectory()) {
                 await WikiHelperFunctions.processMdFiles(filePath, wikiSource, wikiDestination, repositoryName, headerMessage, includePageLink, orgUrl, project, wikiUrl, wikiPageApi, token, wikipages);
-            } else if (file.endsWith('.md')) {
-                console.log(`Markdown File: ${filePath}`);
-                let content = fs.readFileSync(filePath, 'utf8');
-                content = content.replace(/\\newpage/g, '');
-                if (headerMessage) {
-                    content = `${headerMessage}\n\n${content}`;
-                }
-                const relativePath = path.relative(wikiSource, filePath).replace(/\\/g, '/');
-                const wikiPagePath = `${wikiDestination}/${repositoryName}/${relativePath.replace(/\.md$/, '')}`;
-                if (includePageLink) {
-                    const pageLink = WikiHelperFunctions.generateWikiPageLink(orgUrl, project, wikiPagePath);
-                    content = `${content}\n\n---\n\n**[Link to this page](${pageLink})**`;
-                }
-                console.log(`Ensuring path exists for: ${wikiPagePath}`);
-                await WikiHelperFunctions.ensurePathExists(wikipages, wikiPageApi, wikiUrl, path.dirname(wikiPagePath), token, orgUrl, project, repositoryName);
-                const imageRegex = /!\[.*?\]\((.*?)\)/g;
-                let match;
-                const images = [];
-                while ((match = imageRegex.exec(content)) !== null) {
-                    console.log(`Image found: ${match[1]}`);
-                    images.push(match[1]);
-                }
-                for (const image of images) {
-                    const imagePath = path.join(dir, image);
-                    if (fs.existsSync(imagePath)) {
-                        const imageName = path.basename(imagePath);
-                        const attachmentUrl = await WikiHelperFunctions.uploadImageAsAttachment(wikiPageApi, wikiUrl, imagePath, token);
-                        content = content.replace(image, attachmentUrl);
-                        console.log(`Uploaded image: ${imageName} to ${attachmentUrl}`);
-                    } else {
-                        console.error(`Image file not found: ${imagePath}`);
-                    }
-                }
-                console.log(`Attempting to create or update wiki page at: ${wikiPagePath}`);
-                try {
-                    const { headers } = await wikiPageApi.getPage(wikiUrl, wikiPagePath, token);
-                    const etag = headers['etag'];
-                    console.log(`ETag for ${wikiPagePath} is: ${etag}`);
-                    const updateResponse = await wikiPageApi.UpdatePage(wikiUrl, wikiPagePath, content, token, etag);
-                    if (!updateResponse) {
-                        throw new Error(`Failed to update wiki page: No response data.`);
-                    }
-                } catch (error) {
-                    if (axios.isAxiosError(error) && error.response?.status === 404) {
-                        const typeKey = (error.response.data as any)?.typeKey;
-                        if (typeKey === "WikiPageNotFoundException") {
-                            console.log(`WikiPageNotFoundException: Page not found at ${wikiPagePath}`);
-                            console.error(`[A] Trying to create new page for ${wikiPagePath}:`);
-                            const createResponse = await wikiPageApi.CreatePage(wikiUrl, wikiPagePath, content, token);
-                            if (!createResponse) {
-                                throw new Error(`Failed to create wiki page: No response data.`);
-                            }
-                            console.log(`Page Created: ${wikiPagePath}`);
-                        } else {
-                            console.error(`Failed to retrieve ETag for ${wikiPagePath}:`, (error as Error).message);
-                            console.error(`[B] Trying to create new page for ${wikiPagePath}:`);
-                            const createResponse = await wikiPageApi.CreatePage(wikiUrl, wikiPagePath, content, token);
-                            if (!createResponse) {
-                                throw new Error(`Failed to create wiki page: No response data.`);
-                            }
-                        }
-                    } else {
-                        console.error(`Failed to retrieve ETag for ${wikiPagePath}:`, (error as Error).message);
-                        console.error(`[C] Trying to create new page for ${wikiPagePath}:`);
-                        const createResponse = await wikiPageApi.CreatePage(wikiUrl, wikiPagePath, content, token);
-                        if (!createResponse) {
-                            throw new Error(`Failed to create wiki page: No response data.`);
-                        }
-                    }
-                }
+                continue;
+            }
+            
+            if (!file.endsWith('.md')) continue;
+            
+            await WikiHelperFunctions.processMarkdownFile(
+                filePath, wikiSource, wikiDestination, repositoryName,
+                headerMessage, includePageLink, orgUrl, project,
+                wikiUrl, wikiPageApi, token, wikipages, dir
+            );
+        }
+    }
+
+    // Helper method to process a single markdown file
+    private static async processMarkdownFile(
+        filePath: string, wikiSource: string, wikiDestination: string, repositoryName: string,
+        headerMessage: string, includePageLink: boolean, orgUrl: string, project: string,
+        wikiUrl: string, wikiPageApi: WikiPageApi, token: string, 
+        wikipages: WikiInterfaces.WikiPage[], dir: string
+    ) {
+        console.log(`Markdown File: ${filePath}`);
+        let content = fs.readFileSync(filePath, 'utf8');
+        content = content.replace(/\\newpage/g, '');
+        
+        if (headerMessage) {
+            content = `${headerMessage}\n\n${content}`;
+        }
+        
+        const relativePath = path.relative(wikiSource, filePath).replace(/\\/g, '/');
+        const wikiPagePath = `${wikiDestination}/${repositoryName}/${relativePath.replace(/\.md$/, '')}`;
+        
+        if (includePageLink) {
+            const pageLink = WikiHelperFunctions.generateWikiPageLink(orgUrl, project, wikiPagePath);
+            content = `${content}\n\n---\n\n**[Link to this page](${pageLink})**`;
+        }
+        
+        console.log(`Ensuring path exists for: ${wikiPagePath}`);
+        await WikiHelperFunctions.ensurePathExists(wikipages, wikiPageApi, wikiUrl, path.dirname(wikiPagePath), token, orgUrl, project, repositoryName);
+        
+        // Process images in the content
+        content = await WikiHelperFunctions.processImagesInContent(content, dir, wikiPageApi, wikiUrl, token);
+        
+        // Create or update the wiki page
+        console.log(`Attempting to create or update wiki page at: ${wikiPagePath}`);
+        await WikiHelperFunctions.createOrUpdateWikiPage(wikiPageApi, wikiUrl, wikiPagePath, content, token);
+    }
+
+    // Helper method to process images in markdown content
+    private static async processImagesInContent(content: string, dir: string, wikiPageApi: WikiPageApi, wikiUrl: string, token: string): Promise<string> {
+        const imageRegex = /!\[.*?\]\((.*?)\)/g;
+        let match;
+        const images = [];
+        
+        while ((match = imageRegex.exec(content)) !== null) {
+            console.log(`Image found: ${match[1]}`);
+            images.push(match[1]);
+        }
+        
+        for (const image of images) {
+            const imagePath = path.join(dir, image);
+            if (fs.existsSync(imagePath)) {
+                const imageName = path.basename(imagePath);
+                const attachmentUrl = await WikiHelperFunctions.uploadImageAsAttachment(wikiPageApi, wikiUrl, imagePath, token);
+                content = content.replace(image, attachmentUrl);
+                console.log(`Uploaded image: ${imageName} to ${attachmentUrl}`);
+            } else {
+                console.error(`Image file not found: ${imagePath}`);
             }
         }
+        
+        return content;
+    }
+
+    // Helper method to create or update a wiki page with error handling
+    private static async createOrUpdateWikiPage(wikiPageApi: WikiPageApi, wikiUrl: string, wikiPagePath: string, content: string, token: string) {
+        try {
+            const { headers } = await wikiPageApi.getPage(wikiUrl, wikiPagePath, token);
+            const etag = headers['etag'];
+            console.log(`ETag for ${wikiPagePath} is: ${etag}`);
+            const updateResponse = await wikiPageApi.UpdatePage(wikiUrl, wikiPagePath, content, token, etag);
+            if (!updateResponse) {
+                throw new Error(`Failed to update wiki page: No response data.`);
+            }
+        } catch (error) {
+            await WikiHelperFunctions.handleWikiPageCreationError(error, wikiPageApi, wikiUrl, wikiPagePath, content, token);
+        }
+    }
+
+    // Helper method to handle wiki page creation errors
+    private static async handleWikiPageCreationError(error: any, wikiPageApi: WikiPageApi, wikiUrl: string, wikiPagePath: string, content: string, token: string) {
+        if (axios.isAxiosError(error) && error.response?.status === 404) {
+            const typeKey = (error.response.data as any)?.typeKey;
+            if (typeKey === "WikiPageNotFoundException") {
+                console.log(`WikiPageNotFoundException: Page not found at ${wikiPagePath}`);
+                console.error(`[A] Trying to create new page for ${wikiPagePath}:`);
+            } else {
+                console.error(`Failed to retrieve ETag for ${wikiPagePath}:`, (error as Error).message);
+                console.error(`[B] Trying to create new page for ${wikiPagePath}:`);
+            }
+        } else {
+            console.error(`Failed to retrieve ETag for ${wikiPagePath}:`, (error as Error).message);
+            console.error(`[C] Trying to create new page for ${wikiPagePath}:`);
+        }
+        
+        const createResponse = await wikiPageApi.CreatePage(wikiUrl, wikiPagePath, content, token);
+        if (!createResponse) {
+            throw new Error(`Failed to create wiki page: No response data.`);
+        }
+        console.log(`Page Created: ${wikiPagePath}`);
     }
 
     static generateWikiPageLink(orgUrl: string, project: string, wikiPagePath: string): string {
