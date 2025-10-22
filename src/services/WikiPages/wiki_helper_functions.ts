@@ -273,46 +273,92 @@ export class WikiHelperFunctions {
         const managedPathPrefixNoSlash = `${wikiDestination}/${repositoryName}/`;
         console.log(`Managed path prefix (with slash): "${managedPathPrefix}"`);
         console.log(`Managed path prefix (no slash): "${managedPathPrefixNoSlash}"`);
+
+        // Analyze pages and categorize them
+        const { orphanedPages, managedPages } = WikiHelperFunctions.analyzeWikiPages(
+            wikipages, expectedPages, managedPathPrefix, managedPathPrefixNoSlash
+        );
+
+        // Log summary and check if deletion is needed
+        WikiHelperFunctions.logPageAnalysisSummary(wikipages, managedPages, expectedPages, orphanedPages);
+        
+        if (orphanedPages.length === 0) {
+            console.log("No orphaned wiki pages found.");
+            return;
+        }
+
+        // Delete orphaned pages
+        await WikiHelperFunctions.deletePages(orphanedPages, wikiPageApi, wikiUrl, token);
+    }
+
+    // Helper method to analyze wiki pages and categorize them
+    private static analyzeWikiPages(
+        wikipages: WikiInterfaces.WikiPage[], 
+        expectedPages: ExpectedWikiPage[], 
+        managedPathPrefix: string, 
+        managedPathPrefixNoSlash: string
+    ): { orphanedPages: string[], managedPages: string[] } {
         const orphanedPages: string[] = [];
         const managedPages: string[] = [];
+        
         console.log("=== Wiki Page Analysis ===");
         for (const page of wikipages) {
-            if (page.path) {
-                console.log(`Checking page: "${page.path}"`);
-                const isManaged = page.path.startsWith(managedPathPrefix) || page.path.startsWith(managedPathPrefixNoSlash);
-                if (isManaged) {
-                    managedPages.push(page.path);
-                    console.log(`  - MANAGED: Under our managed path`);
-                    const expectedPage = expectedPages.find(ep => ep.WikiPagePath === page.path || ep.IsDirectory);
-                    if (!expectedPage) {
-                        orphanedPages.push(page.path);
-                        console.log(`  - ORPHANED: No corresponding markdown file`);
-                    } else {
-                        console.log(`  - KEPT: Has corresponding markdown file (${expectedPage.IsDirectory ? 'Directory' : 'File'})`);
-                    }
-                } else {
-                    console.log(`  - IGNORED: Outside managed path`);
-                    console.log(`    Expected to start with: "${managedPathPrefix}" or "${managedPathPrefixNoSlash}"`);
-                }
-            } else {
+            if (!page.path) {
                 console.log(`Skipping page with no path: ${JSON.stringify(page)}`);
+                continue;
+            }
+
+            console.log(`Checking page: "${page.path}"`);
+            const isManaged = page.path.startsWith(managedPathPrefix) || page.path.startsWith(managedPathPrefixNoSlash);
+            
+            if (!isManaged) {
+                console.log(`  - IGNORED: Outside managed path`);
+                console.log(`    Expected to start with: "${managedPathPrefix}" or "${managedPathPrefixNoSlash}"`);
+                continue;
+            }
+
+            managedPages.push(page.path);
+            console.log(`  - MANAGED: Under our managed path`);
+            
+            const expectedPage = expectedPages.find(ep => ep.WikiPagePath === page.path);
+
+            if (!expectedPage) {
+                orphanedPages.push(page.path);
+                console.log(`  - ORPHANED: No corresponding markdown file`);
+            } else {
+                console.log(`  - KEPT: Has corresponding markdown file (${expectedPage.IsDirectory ? 'Directory' : 'File'})`);
             }
         }
+
+        return { orphanedPages, managedPages };
+    }
+
+    // Helper method to log the page analysis summary
+    private static logPageAnalysisSummary(
+        wikipages: WikiInterfaces.WikiPage[], 
+        managedPages: string[], 
+        expectedPages: ExpectedWikiPage[], 
+        orphanedPages: string[]
+    ) {
         console.log(`\nSummary:`);
         console.log(`- Total wiki pages: ${wikipages.length}`);
         console.log(`- Pages under managed path: ${managedPages.length}`);
         console.log(`- Expected pages from markdown: ${expectedPages.length}`);
         console.log(`- Orphaned pages to delete: ${orphanedPages.length}`);
+        
         if (managedPages.length > 0) {
             console.log(`\nManaged pages:`);
             managedPages.forEach(page => console.log(`  - ${page}`));
         }
-        if (orphanedPages.length === 0) {
-            console.log("No orphaned wiki pages found.");
-            return;
+        
+        if (orphanedPages.length > 0) {
+            console.log(`\nFound ${orphanedPages.length} orphaned wiki pages to delete:`);
+            orphanedPages.forEach(page => console.log(`  - ${page}`));
         }
-        console.log(`\nFound ${orphanedPages.length} orphaned wiki pages to delete:`);
-        orphanedPages.forEach(page => console.log(`  - ${page}`));
+    }
+
+    // Helper method to delete a list of wiki pages
+    private static async deletePages(orphanedPages: string[], wikiPageApi: WikiPageApi, wikiUrl: string, token: string) {
         for (const pagePath of orphanedPages) {
             try {
                 console.log(`Deleting orphaned wiki page: ${pagePath}`);
