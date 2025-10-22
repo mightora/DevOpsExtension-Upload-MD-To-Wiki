@@ -314,6 +314,228 @@ Repository Markdown Files
 - **Permission Issues**: Detailed troubleshooting information
 - **Path Validation**: Safe handling of cross-platform path differences
 
+## Local Development & Debugging
+
+### Prerequisites for Local Development
+
+Before running the extension locally, ensure you have:
+
+- **Node.js** (version 14 or higher)
+- **TypeScript** compiler (`npm install -g typescript`)
+- **VS Code** with debugging capabilities
+- **Azure DevOps access** with appropriate permissions
+
+### Environment Setup
+
+#### 1. Install Dependencies
+```bash
+npm install
+```
+
+#### 2. Build TypeScript
+```bash
+npm run build
+# or for continuous compilation
+tsc --watch
+```
+
+#### 3. Set Required Environment Variables
+
+The extension requires several environment variables that are normally provided by Azure DevOps pipelines:
+
+```bash
+# Azure DevOps System Variables
+export SYSTEM_ACCESSTOKEN="your_personal_access_token"
+export SYSTEM_TEAMPROJECT="your_project_name"
+export BUILD_BUILDID="local_build_001"
+
+# Windows PowerShell
+$env:SYSTEM_ACCESSTOKEN="your_personal_access_token"
+$env:SYSTEM_TEAMPROJECT="your_project_name" 
+$env:BUILD_BUILDID="local_build_001"
+```
+
+**Important**: Replace `your_personal_access_token` with a valid Azure DevOps Personal Access Token that has:
+- **Wiki (Read & Write)** permissions
+- **Project and Team (Read)** permissions
+- **Code (Read)** permissions (if accessing private repos)
+
+### VS Code Debug Configuration
+
+The project includes a pre-configured VS Code launch configuration in `.vscode/launch.json`:
+
+#### Debug Configuration Details:
+
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run main.ts",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/main.ts",
+            "outFiles": ["${workspaceFolder}/src/**/*.js"],
+            "env": {
+                "INPUT_ADOBASEURL": "https://dev.azure.com/yourorganization",
+                "INPUT_MDREPOSITORYNAME": "Wiki_Repo_Test",
+                "INPUT_MDTITLE": "Title",
+                "INPUT_WIKIDESTINATION": "Wiki_Destination",
+                "INPUT_MDVERSION": "1.0.0",
+                "INPUT_WIKISOURCE": "services\\test_local_wiki_repo",
+                "INPUT_HEADERMESSAGE": "Optional header message",
+                "INPUT_INCLUDEPAGELINK": "false",
+                "INPUT_DELETEORPHANEDPAGES": "true",
+                "SYSTEM_ACCESSTOKEN": "your_personal_access_token_here",
+                "SYSTEM_TEAMPROJECT": "Wiki_Repo_Test",
+                "BUILD_BUILDID": "123"
+            }
+        }
+    ]
+}
+```
+
+#### Required Parameters for Local Execution:
+
+Update the `env` section in your launch configuration with all required environment variables:
+
+| Variable | Description | Example Value |
+|----------|-------------|---------------|
+| **Azure DevOps Task Inputs** | | |
+| `INPUT_ADOBASEURL` | Azure DevOps organization URL | `https://dev.azure.com/yourorg` |
+| `INPUT_MDREPOSITORYNAME` | Source repository name containing markdown files | `Wiki_Repo_Test` |
+| `INPUT_MDTITLE` | Title for the wiki pages | `Documentation` |
+| `INPUT_WIKIDESTINATION` | Target wiki destination path | `Wiki_Destination` |
+| `INPUT_MDVERSION` | Version identifier for the content | `1.0.0` |
+| `INPUT_WIKISOURCE` | Local path to markdown source files for testing | `services\\test_local_wiki_repo` |
+| `INPUT_HEADERMESSAGE` | Optional header message for wiki pages | `Updated via Pipeline` |
+| `INPUT_INCLUDEPAGELINK` | Include page links in wiki content | `true` or `false` |
+| `INPUT_DELETEORPHANEDPAGES` | Delete orphaned wiki pages | `true` or `false` |
+| **Azure DevOps System Variables** | | |
+| `SYSTEM_ACCESSTOKEN` | Azure DevOps Personal Access Token | `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
+| `SYSTEM_TEAMPROJECT` | Target Azure DevOps project name | `MyProject` |
+| `BUILD_BUILDID` | Build identifier for logging | `local_debug_001` |
+
+#### Task Input Parameters (Simulated via Code):
+
+When running locally, the extension expects these inputs to be provided via `tl.getInput()`. You can modify the `main.ts` file for local testing:
+
+```typescript
+// For local development, you can hardcode values or use environment variables
+let orgUrl: string = process.env.ADO_BASE_URL || 'https://dev.azure.com/yourorg';
+let repositoryName: string = process.env.REPO_NAME || 'your-wiki-repo';
+let wikiSource: string = process.env.WIKI_SOURCE || './test-docs';
+let wikiDestination: string = process.env.WIKI_DEST || 'TestDocs';
+let headerMessage: string = process.env.HEADER_MSG || 'Local Development Test';
+```
+
+### Running and Debugging
+
+#### Method 1: VS Code Debugger (Recommended)
+
+1. **Set Breakpoints**: Click in the gutter next to line numbers in VS Code
+2. **Press F5** or go to **Run → Start Debugging**
+3. **Select Configuration**: Choose "Debug Extension" from the dropdown
+4. **Monitor Console**: Watch the integrated terminal for output and errors
+
+#### Method 2: Command Line Execution
+
+```bash
+# Ensure environment variables are set
+node src/main.js
+```
+
+#### Method 3: NPM Script (if configured)
+
+```bash
+npm run debug
+```
+
+### Local Testing Setup
+
+#### 1. Create Test Documentation Structure:
+
+```
+test-docs/
+├── README.md
+├── getting-started.md
+├── api/
+│   ├── overview.md
+│   └── endpoints.md
+├── images/
+│   ├── architecture.png
+│   └── flow-diagram.jpg
+└── guides/
+    ├── installation.md
+    └── configuration.md
+```
+
+#### 2. Configure Test Parameters:
+
+Create a local configuration file or modify environment variables:
+
+```bash
+# Test Configuration
+export WIKI_SOURCE="./test-docs"
+export WIKI_DEST="LocalTest" 
+export REPO_NAME="test.wiki"
+export HEADER_MSG="🧪 Local Development Test - Do Not Edit"
+```
+
+#### 3. Run with Test Data:
+
+```bash
+# Build and run
+npm run build && node src/main.js
+```
+
+### Debugging Tips
+
+#### Common Issues and Solutions:
+
+1. **Authentication Errors**:
+   - Verify your Personal Access Token has correct permissions
+   - Check token expiration date
+   - Ensure organization URL is correct
+
+2. **File Not Found Errors**:
+   - Verify `wikiSource` path exists and contains .md files
+   - Check file permissions
+   - Ensure relative paths are correct
+
+3. **Wiki Access Issues**:
+   - Confirm wiki repository exists in the target project
+   - Verify your account has wiki write permissions
+   - Check project name spelling and case sensitivity
+
+#### Logging and Troubleshooting:
+
+The extension provides detailed console logging:
+- **Info Level**: Normal operation progress
+- **Error Level**: Failures and exceptions with stack traces
+- **Debug Level**: Detailed API calls and responses
+
+#### Breakpoint Locations for Debugging:
+
+- **`main.ts:runTask()`**: Entry point and parameter validation
+- **`wiki_helper_functions.ts:processMdFiles()`**: File processing logic
+- **`wiki_pages_api_service.ts:CreatePage()`**: API calls and responses
+- **Error handlers**: Exception handling and recovery logic
+
+### Building for Production
+
+```bash
+# Clean build
+npm run clean
+npm run build
+
+# Run tests (if available)
+npm test
+
+# Package extension
+npm run package
+```
+
 ## Support
 For support, please visit mightora.io or open an issue on the GitHub repository.
 
