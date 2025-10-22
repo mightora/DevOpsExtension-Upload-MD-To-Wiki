@@ -10,6 +10,11 @@ export interface ExpectedWikiPage {
 }
 
 export class WikiHelperFunctions {
+    /**
+     * Fetches a developer message from a remote API
+     * @param https - The HTTPS module for making HTTP requests
+     * @returns Promise<string> - The developer message from the API
+     */
     static async fetchDeveloperMessage(https: any): Promise<string> {
         const url = 'https://developer-message.mightora.io/api/HttpTrigger?appname=mightora-UploadMDToWiki';
         return new Promise((resolve, reject) => {
@@ -36,6 +41,17 @@ export class WikiHelperFunctions {
         });
     }
 
+    /**
+     * Ensures that all path segments in a wiki page path exist, creating missing ones
+     * @param wikipages - Array of existing remote wiki pages to check against
+     * @param wikiPageApi - API service for wiki operations
+     * @param wikiUrl - Base URL for the wiki API
+     * @param pathStr - The wiki path to ensure exists
+     * @param token - Authentication token
+     * @param orgUrl - Azure DevOps organization URL
+     * @param project - Project name
+     * @param repositoryName - Wiki repository name
+     */
     static async ensurePathExists(wikipages: WikiInterfaces.WikiPage[], wikiPageApi: WikiPageApi, wikiUrl: string, pathStr: string, token: string, orgUrl: string, project: string, repositoryName: string) {
         const parts = pathStr.split('/');
         let currentPath = '';
@@ -66,11 +82,20 @@ export class WikiHelperFunctions {
         }
     }
 
+    /**
+     * Recursively scans a directory to collect expected wiki pages from markdown files and their containing directories
+     * @param dir - The directory to scan for markdown files and their containing directories
+     * @param expectedPages - Array to populate with expected wiki page objects that will be pushed to the wiki
+     * @param wikiSource - Root source directory for markdown files
+     * @param wikiDestination - Wiki remote destination root path
+     * @param repositoryName - Wiki remote repository name
+     */
     static collectExpectedWikiPages(dir: string, expectedPages: ExpectedWikiPage[], wikiSource: string, wikiDestination: string, repositoryName: string) {
         console.log(`Scanning directory for markdown files: ${dir}`);
         const files = fs.readdirSync(dir);
         for (const file of files) {
             const filePath = path.join(dir, file);
+            //if the filePath is a directory, add it to the expectedPages array and recurse into it to find .md files
             if (fs.statSync(filePath).isDirectory()) {
                 const relativePath = path.relative(wikiSource, filePath).replace(/\\/g, '/');
                 const wikiPagePath = `/${wikiDestination}/${repositoryName}/${relativePath}`;
@@ -96,6 +121,21 @@ export class WikiHelperFunctions {
         }
     }
 
+    /**
+     * Recursively processes markdown files in a directory and uploads them to the wiki
+     * @param dir - Directory to process
+     * @param wikiSource - Root source (local) directory for markdown files
+     * @param wikiDestination - Wiki remote destination root path
+     * @param repositoryName - Wiki remote repository name
+     * @param headerMessage - Optional header message to prepend to each wiki page
+     * @param includePageLink - Whether to include a link back to the wiki page
+     * @param orgUrl - Azure DevOps organization URL
+     * @param project - Project name
+     * @param wikiUrl - Base URL for the wiki API
+     * @param wikiPageApi - API service for wiki operations
+     * @param token - Authentication token
+     * @param wikipages - Array of existing wiki pages
+     */
     static async processMdFiles(
         dir: string,
         wikiSource: string,
@@ -129,7 +169,22 @@ export class WikiHelperFunctions {
         }
     }
 
-    // Helper method to process a single markdown file
+    /**
+     * Helper method to process a single markdown file
+     * @param filePath - Path (local) to the markdown file to process
+     * @param wikiSource - Root source directory for markdown files
+     * @param wikiDestination - Wiki remote destination root path
+     * @param repositoryName - Wiki remote repository name
+     * @param headerMessage - Optional header message to prepend to the page
+     * @param includePageLink - Whether to include a link back to the wiki page
+     * @param orgUrl - Azure DevOps organization URL
+     * @param project - Project name
+     * @param wikiUrl - Base URL for the wiki API
+     * @param wikiPageApi - API service for wiki operations
+     * @param token - Authentication token for devops
+     * @param wikipages - Array of existing wiki pages
+     * @param dir - Directory containing the markdown file
+     */
     private static async processMarkdownFile(
         filePath: string, wikiSource: string, wikiDestination: string, repositoryName: string,
         headerMessage: string, includePageLink: boolean, orgUrl: string, project: string,
@@ -163,7 +218,15 @@ export class WikiHelperFunctions {
         await WikiHelperFunctions.createOrUpdateWikiPage(wikiPageApi, wikiUrl, wikiPagePath, content, token);
     }
 
-    // Helper method to process images in markdown content
+    /**
+     * Helper method to process images in markdown content
+     * @param content - Markdown content to process
+     * @param dir - Directory (local) containing the markdown file and images
+     * @param wikiPageApi - API service for wiki operations
+     * @param wikiUrl - Base URL for the wiki API
+     * @param token - devops Authentication token
+     * @returns Promise<string> - Updated content with image URLs replaced
+     */
     private static async processImagesInContent(content: string, dir: string, wikiPageApi: WikiPageApi, wikiUrl: string, token: string): Promise<string> {
         const imageRegex = /!\[.*?\]\((.*?)\)/g;
         let match;
@@ -189,7 +252,14 @@ export class WikiHelperFunctions {
         return content;
     }
 
-    // Helper method to create or update a wiki page with error handling
+    /**
+     * Helper method to create or update a wiki page with error handling
+     * @param wikiPageApi - API service for wiki operations
+     * @param wikiUrl - Base URL for the wiki API
+     * @param wikiPagePath - Path to the remote wiki page
+     * @param content - Content to write to the page
+     * @param token - Authentication token
+     */
     private static async createOrUpdateWikiPage(wikiPageApi: WikiPageApi, wikiUrl: string, wikiPagePath: string, content: string, token: string) {
         try {
             const { headers } = await wikiPageApi.getPage(wikiUrl, wikiPagePath, token);
@@ -204,7 +274,15 @@ export class WikiHelperFunctions {
         }
     }
 
-    // Helper method to handle wiki page creation errors
+    /**
+     * Helper method to handle wiki page creation errors
+     * @param error - The error that occurred during page creation/update
+     * @param wikiPageApi - API service for wiki operations
+     * @param wikiUrl - Base URL for the wiki API
+     * @param wikiPagePath - Path to the (remote) wiki page
+     * @param content - Content to write to the page
+     * @param token - Authentication token
+     */
     private static async handleWikiPageCreationError(error: any, wikiPageApi: WikiPageApi, wikiUrl: string, wikiPagePath: string, content: string, token: string) {
         if (axios.isAxiosError(error) && error.response?.status === 404) {
             const typeKey = (error.response.data as any)?.typeKey;
@@ -227,12 +305,27 @@ export class WikiHelperFunctions {
         console.log(`Page Created: ${wikiPagePath}`);
     }
 
+    /**
+     * Generates a URL link to a wiki page
+     * @param orgUrl - Azure DevOps organization URL
+     * @param project - Project name
+     * @param wikiPagePath - Path to the wiki page
+     * @returns string - Full URL to the wiki page
+     */
     static generateWikiPageLink(orgUrl: string, project: string, wikiPagePath: string): string {
         const cleanPath = wikiPagePath.startsWith('/') ? wikiPagePath.substring(1) : wikiPagePath;
         const encodedPath = encodeURIComponent(cleanPath);
         return `${orgUrl}${project}/_wiki/wikis/${project}.wiki?pagePath=%2F${encodedPath}`;
     }
 
+    /**
+     * Uploads an image as an attachment to the wiki
+     * @param wikiPageApi - API service for wiki operations
+     * @param wikiUrl - Base URL for the wiki API
+     * @param imagePath - Local path to the image file
+     * @param token - devops Authentication token
+     * @returns Promise<string> - The attachment path for the uploaded image
+     */
     static async uploadImageAsAttachment(wikiPageApi: WikiPageApi, wikiUrl: string, imagePath: string, token: string): Promise<string> {
         const imageName = path.basename(imagePath);
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -259,6 +352,16 @@ export class WikiHelperFunctions {
         return attachmentPath;
     }
 
+    /**
+     * Deletes orphaned wiki pages that no longer have corresponding markdown files
+     * @param expectedPages - Array of expected wiki pages based on markdown files in (local) source directory
+     * @param wikipages - Array of existing wiki pages from the API
+     * @param wikiDestination - Wiki destination root path
+     * @param repositoryName - Wiki repository name
+     * @param wikiPageApi - API service for wiki operations
+     * @param wikiUrl - Base URL for the wiki API
+     * @param token - Authentication token
+     */
     static async deleteOrphanedWikiPages(
         expectedPages: ExpectedWikiPage[],
         wikipages: WikiInterfaces.WikiPage[],
@@ -291,7 +394,14 @@ export class WikiHelperFunctions {
         await WikiHelperFunctions.deletePages(orphanedPages, wikiPageApi, wikiUrl, token);
     }
 
-    // Helper method to analyze wiki pages and categorize them
+    /**
+     * Helper method to analyze wiki pages and categorize them to keep them or mark them as orphaned for deletion from the remote wiki
+     * @param wikipages - Array of existing wiki pages from the API
+     * @param expectedPages - Array of expected wiki pages based on markdown files in (local) source directory
+     * @param managedPathPrefix - Managed path prefix with leading slash
+     * @param managedPathPrefixNoSlash - Managed path prefix without leading slash
+     * @returns Object containing arrays of orphaned and managed page paths
+     */
     private static analyzeWikiPages(
         wikipages: WikiInterfaces.WikiPage[], 
         expectedPages: ExpectedWikiPage[], 
@@ -333,7 +443,13 @@ export class WikiHelperFunctions {
         return { orphanedPages, managedPages };
     }
 
-    // Helper method to log the page analysis summary
+    /**
+     * Helper method to log the page analysis summary
+     * @param wikipages - Array of existing wiki pages from the API
+     * @param managedPages - Array of managed page paths
+     * @param expectedPages - Array of expected wiki pages based on markdown files in (local) source directory
+     * @param orphanedPages - Array of orphaned page paths to be deleted from the remote wiki
+     */
     private static logPageAnalysisSummary(
         wikipages: WikiInterfaces.WikiPage[], 
         managedPages: string[], 
@@ -357,7 +473,13 @@ export class WikiHelperFunctions {
         }
     }
 
-    // Helper method to delete a list of wiki pages
+    /**
+     * Helper method to delete a list of wiki pages
+     * @param orphanedPages - Array of orphaned page paths to delete
+     * @param wikiPageApi - API service for wiki operations
+     * @param wikiUrl - Base URL for the wiki API
+     * @param token - Authentication token
+     */
     private static async deletePages(orphanedPages: string[], wikiPageApi: WikiPageApi, wikiUrl: string, token: string) {
         for (const pagePath of orphanedPages) {
             try {
