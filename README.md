@@ -2,6 +2,30 @@
 
 [![Visual Studio Marketplace](https://img.shields.io/badge/Marketplace-View%20Extension-blue?logo=visual-studio)](https://marketplace.visualstudio.com/items?itemName=mightoraio.upload-md-to-wiki) [![Release Extension](https://github.com/mightora/DevOpsExtension-Upload-MD-To-Wiki/actions/workflows/release-extension.yml/badge.svg)](https://github.com/mightora/DevOpsExtension-Upload-MD-To-Wiki/actions/workflows/release-extension.yml) [![vsmarketplace](https://vsmarketplacebadges.dev/version/mightoraio.upload-md-to-wiki.svg)](https://marketplace.visualstudio.com/items?itemName=mightoraio.upload-md-to-wiki) [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/mightora/DevOpsExtension-Upload-MD-To-Wiki.svg)](https://github.com/mightora/DevOpsExtension-Upload-MD-To-Wiki/issues "Average time to resolve an issue") [![Percentage of issues still open](http://isitmaintained.com/badge/open/mightora/DevOpsExtension-Upload-MD-To-Wiki.svg)](https://github.com/mightora/DevOpsExtension-Upload-MD-To-Wiki/issues "Percentage of issues still open") [![View on Mightora](https://img.shields.io/badge/View_on-Mightora.io-blue)](https://mightora.io/tools/cicd/upload-md-to-wiki/ "View on Mightora") 
 
+## Document Control
+
+| Field | Value |
+|-------|--------|
+| **Document Title** | DevOps Extension: Upload Markdown to Wiki |
+| **Document Version** | 2.1.0 |
+| **Last Updated** | October 22, 2025 |
+| **Author** | Wayne Campbell |
+| **Repository** | mightora/DevOpsExtension-Upload-MD-To-Wiki |
+| **Branch** | feature/test_branch |
+| **Document Status** | Active |
+| **Review Date** | October 22, 2025 |
+| **Next Review** | January 22, 2026 |
+
+### Document History
+
+| Version | Date | Author | Changes |
+|---------|------|---------|---------|
+| 2.1.0 | Oct 22, 2025 | Wayne Campbell | Major code refactoring: Reduced cyclomatic complexity for `deleteOrphanedWikiPages` (9→3) and `processMdFiles` (10→4). Added comprehensive JSDoc documentation. Enhanced local development documentation with complete debug configuration. |
+| 2.0.0 | Oct 2025 | Wayne Campbell | Added architecture documentation, local development setup, and debugging instructions |
+| 1.0.0 | Initial |Ian Tweedie | Initial extension release with core functionality |
+
+---
+
 This DevOps extension allows you to move markdown (`.md`) files held in an Azure DevOps repository and publish them to an Azure DevOps Wiki. This can be useful for automating the documentation process and ensuring that your wiki is always up-to-date with the latest markdown files from your repository.
 
 ## Features
