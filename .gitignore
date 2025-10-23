@@ -48,6 +48,9 @@ jspm_packages/
 # TypeScript v1 declaration files
 typings/
 
+# VS Code settings
+.vscode/launch.json
+
 # TypeScript cache
 *.tsbuildinfo
 
@@ -106,3 +109,14 @@ dist
 
 # TernJS port file
 .tern-port
+
+# Ignore all JavaScript files in src/
+src/**/*.js
+
+# Ignore all .taskKey files in src/
+src/**/*.taskKey
+
+
+# This is a local test repo to mirror the structure of a real DevOps extension
+# It should not be published or shared
+test_local_wiki_repo/
