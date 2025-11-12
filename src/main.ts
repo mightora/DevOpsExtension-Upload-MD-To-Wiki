@@ -67,25 +67,31 @@ export async function runTask({
         // Wiki Access
         let wikiApiObject = await webapi.getWikiApi();
         const wikis = await wikiApiObject.getAllWikis(project);
-        console.log('All discovered wikis:', JSON.stringify(wikis.map(w => ({
-            id: w.id,
-            name: w.name,
-            type: w.type,
-            typeString: w.type === WikiInterfacesLib.WikiType.ProjectWiki ? 'ProjectWiki' : 'CodeWiki'
-        })), null, 2));
-
-        // Filter to only Project Wikis (exclude Code Wikis)
+        console.log(`📋 Wiki Discovery Results for project '${project}':`);
+        console.log(`   Total wikis found: ${wikis.length}`);
+        
         const projectWikis = wikis.filter(wiki => wiki.type === WikiInterfacesLib.WikiType.ProjectWiki);
+        const codeWikis = wikis.filter(wiki => wiki.type === WikiInterfacesLib.WikiType.CodeWiki);
+        
+        if (codeWikis.length > 0) {
+            console.log(`   📚 Code Wikis found (${codeWikis.length}) - Not supported by this extension:`);
+            codeWikis.forEach(wiki => console.log(`      • ${wiki.name} (id: ${wiki.id})`));
+        }
+        
+        if (projectWikis.length > 0) {
+            console.log(`   📖 Project Wikis found (${projectWikis.length}) - Compatible:`);
+            projectWikis.forEach(wiki => console.log(`      • ${wiki.name} (id: ${wiki.id})`));
+        }
         
         if (projectWikis.length === 0) {
-            throw new Error(`No Project Wikis found in project ${project}. Only found ${wikis.length} Code Wiki(s). Please create a Project Wiki.`);
+            throw new Error(`❌ No Project Wikis found in project '${project}'. Found ${codeWikis.length} Code Wiki(s) which are not supported. Please create a Project Wiki in Azure DevOps.`);
         }
 
         // Use the first Project Wiki found
         let selectedWiki = projectWikis[0];
         let wikiUrl = selectedWiki.url;
 
-        console.log(`Using Project Wiki: id=${selectedWiki.id} name=${selectedWiki.name} type=${selectedWiki.type}`);
+        console.log(`✅ Selected Project Wiki: '${selectedWiki.name}' (id: ${selectedWiki.id})`);
 
         // Retrieve existing pages
         let wikiPageApi = new WikiPageApiClass();

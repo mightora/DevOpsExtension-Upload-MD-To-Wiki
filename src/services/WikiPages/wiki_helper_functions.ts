@@ -69,13 +69,48 @@ export class WikiHelperFunctions {
                     console.error(`Failed to retrieve ETag for ${currentPath}:`, (error as Error).message);
                 }
             } else {
-                console.log(`Page not found: ${currentPath}. Creating the page.`);
+                console.log(`🔧 Page not found: ${currentPath}. Creating the page.`);
                 try {
-                    const content = `# ${part}\n \n [[ _TOSP_ ]] `;
-                    await wikiPageApi.CreatePage(wikiUrl, currentPath, content, token);
-                    console.log(`Page created at ${currentPath}`);
+                    const content = `# ${part}\n \n [[_TOSP_]] `;
+                    const createdPage = await wikiPageApi.CreatePage(wikiUrl, currentPath, content, token);
+                    console.log(`✅ Page created at ${currentPath}`);
+                    
+                    // **FIX: Add the newly created page to the wikipages array**
+                    const newWikiPage: WikiInterfaces.WikiPage = {
+                        id: createdPage?.id || Math.floor(Math.random() * 1000000), // Use actual ID from response or fallback
+                        path: currentPath,
+                        isParentPage: true, // This is a directory/parent page
+                        order: wikipages.length + 1, // Add at the end
+                        remoteUrl: `${wikiUrl}${currentPath}`,
+                        url: `${wikiUrl}${currentPath}`,
+                        gitItemPath: currentPath
+                    };
+                    wikipages.push(newWikiPage);
+                    console.log(`📝 Added new page to cache: ${currentPath}`);
+                    
                 } catch (error) {
-                    console.error(`Failed to create page at ${currentPath}:`, (error as Error).message);
+                    console.error(`❌ Failed to create page at ${currentPath}:`, (error as Error).message);
+                    
+                    // Check if it's a "page already exists" error and handle gracefully
+                    if (error && typeof error === 'object' && 'message' in error) {
+                        const errorMessage = (error as any).message || '';
+                        if (errorMessage.includes('already exists')) {
+                            console.log(`⚠️  Page ${currentPath} was created by another process, continuing...`);
+                            // Add it to our cache even though we didn't create it
+                            const existingWikiPage: WikiInterfaces.WikiPage = {
+                                id: Math.floor(Math.random() * 1000000), // We don't have the actual ID
+                                path: currentPath,
+                                isParentPage: true,
+                                order: wikipages.length + 1,
+                                remoteUrl: `${wikiUrl}${currentPath}`,
+                                url: `${wikiUrl}${currentPath}`,
+                                gitItemPath: currentPath
+                            };
+                            wikipages.push(existingWikiPage);
+                            continue; // Don't throw, just continue with the next part
+                        }
+                    }
+                    
                     throw new Error(`Failed to create page at ${currentPath}. Please check permissions.`);
                 }
             }
