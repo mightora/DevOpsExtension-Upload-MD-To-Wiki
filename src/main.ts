@@ -42,9 +42,7 @@ export async function runTask({
         // Getting input values
         let orgUrl: string = tlLib.getInput('ADOBaseUrl', true);
         let repositoryName: string = tlLib.getInput("MDRepositoryName", true);
-        let title: string = tlLib.getInput("MDTitle", true);
         let wikiDestination: string = tlLib.getInput("WikiDestination", true);
-        let versionNumber: string = tlLib.getInput("MDVersion", true);
         let wikiSource: string = tlLib.getInput("wikiSource", true); 
         let headerMessage: string = tlLib.getInput("HeaderMessage", false) || '';
         let includePageLink: boolean = tlLib.getBoolInput("IncludePageLink", false) || false;
@@ -67,10 +65,31 @@ export async function runTask({
         // Wiki Access
         let wikiApiObject = await webapi.getWikiApi();
         const wikis = await wikiApiObject.getAllWikis(project);
-        if (wikis.length === 0) {
-            throw new Error(`No wikis found in project ${project}. Please ensure a wiki is created.`);
+        console.log(`📋 Wiki Discovery Results for project '${project}':`);
+        console.log(`   Total wikis found: ${wikis.length}`);
+        
+        const projectWikis = wikis.filter(wiki => wiki.type === WikiInterfacesLib.WikiType.ProjectWiki);
+        const codeWikis = wikis.filter(wiki => wiki.type === WikiInterfacesLib.WikiType.CodeWiki);
+        
+        if (codeWikis.length > 0) {
+            console.log(`   📚 Code Wikis found (${codeWikis.length}) - Not supported by this extension:`);
+            codeWikis.forEach(wiki => console.log(`      • ${wiki.name} (id: ${wiki.id})`));
         }
-        let wikiUrl = wikis[0].url;
+        
+        if (projectWikis.length > 0) {
+            console.log(`   📖 Project Wikis found (${projectWikis.length}) - Compatible:`);
+            projectWikis.forEach(wiki => console.log(`      • ${wiki.name} (id: ${wiki.id})`));
+        }
+        
+        if (projectWikis.length === 0) {
+            throw new Error(`❌ No Project Wikis found in project '${project}'. Found ${codeWikis.length} Code Wiki(s) which are not supported. Please create a Project Wiki in Azure DevOps.`);
+        }
+
+        // Use the first Project Wiki found
+        let selectedWiki = projectWikis[0];
+        let wikiUrl = selectedWiki.url;
+
+        console.log(`✅ Selected Project Wiki: '${selectedWiki.name}' (id: ${selectedWiki.id})`);
 
         // Retrieve existing pages
         let wikiPageApi = new WikiPageApiClass();

@@ -10,7 +10,7 @@
     "version": {
         "Major": 0,
         "Minor": 1,
-        "Patch": 172
+        "Patch": 176
     },
     "minimumAgentVersion": "2.0.0",
     "instanceNameFormat": "Upload MD To Wiki",
@@ -38,22 +38,6 @@
             "defaultValue": "$(Build.Repository.Name)",
             "required": true,
             "helpMarkDown": "Repository name"
-        },
-        {
-            "name": "MDVersion",
-            "type": "string",
-            "label": "Versioning",
-            "defaultValue": "$(Build.BuildNumber)",
-            "required": true,
-            "helpMarkDown": "Build number set by any versioning mechanism"
-        },
-        {
-            "name": "MDTitle",
-            "type": "string",
-            "label": "Markdown title",
-            "defaultValue": "MD for $(Build.Repository.Name)",
-            "required": true,
-            "helpMarkDown": "Markdown title"
         },
         {
             "name": "WikiDestination",
