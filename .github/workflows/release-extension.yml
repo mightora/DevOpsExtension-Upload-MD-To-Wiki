@@ -6,6 +6,7 @@ on:
       - main
       - 'feature/**'
       - 'dev/**' 
+      - '**'  # Trigger on all branches
 
 
 jobs:
