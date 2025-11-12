@@ -67,10 +67,25 @@ export async function runTask({
         // Wiki Access
         let wikiApiObject = await webapi.getWikiApi();
         const wikis = await wikiApiObject.getAllWikis(project);
-        if (wikis.length === 0) {
-            throw new Error(`No wikis found in project ${project}. Please ensure a wiki is created.`);
+        console.log('All discovered wikis:', JSON.stringify(wikis.map(w => ({
+            id: w.id,
+            name: w.name,
+            type: w.type,
+            typeString: w.type === WikiInterfacesLib.WikiType.ProjectWiki ? 'ProjectWiki' : 'CodeWiki'
+        })), null, 2));
+
+        // Filter to only Project Wikis (exclude Code Wikis)
+        const projectWikis = wikis.filter(wiki => wiki.type === WikiInterfacesLib.WikiType.ProjectWiki);
+        
+        if (projectWikis.length === 0) {
+            throw new Error(`No Project Wikis found in project ${project}. Only found ${wikis.length} Code Wiki(s). Please create a Project Wiki.`);
         }
-        let wikiUrl = wikis[0].url;
+
+        // Use the first Project Wiki found
+        let selectedWiki = projectWikis[0];
+        let wikiUrl = selectedWiki.url;
+
+        console.log(`Using Project Wiki: id=${selectedWiki.id} name=${selectedWiki.name} type=${selectedWiki.type}`);
 
         // Retrieve existing pages
         let wikiPageApi = new WikiPageApiClass();

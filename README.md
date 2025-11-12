@@ -28,8 +28,20 @@ Senior Software Engineer | Cloud Engineer | Blogger
 ## Prerequisites
 
 - Azure DevOps account
+- **Project Wiki** (not Code Wiki) - The extension requires a Project Wiki to be created in your Azure DevOps project
 - Personal Access Token (PAT) with sufficient permissions to access the repository and wiki
 - Azure DevOps pipeline
+
+### Wiki Requirements
+
+This extension specifically works with **Project Wikis** only. If your project only has Code Wikis, you'll need to create a Project Wiki:
+
+1. Navigate to your Azure DevOps project
+2. Go to **Overview → Wiki**
+3. If no Project Wiki exists, click **Create project wiki**
+4. The extension will automatically detect and use the Project Wiki
+
+**Note**: Code Wikis (wikis backed by Git repositories) are not supported due to authentication complexity with version descriptors.
 
 ## Installation
 
