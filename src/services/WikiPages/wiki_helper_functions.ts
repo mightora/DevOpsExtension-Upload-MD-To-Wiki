@@ -66,7 +66,17 @@ export class WikiHelperFunctions {
                     const etag = headers['etag'];
                     console.log(`ETag for ${currentPath}: ${etag}`);
                 } catch (error) {
-                    console.error(`Failed to retrieve ETag for ${currentPath}:`, (error as Error).message);
+                    // Check if it's a "page not found" error which is expected for new pages
+                    if (error && typeof error === 'object' && 'message' in error) {
+                        const errorMessage = (error as any).message || '';
+                        if (errorMessage.includes('could not be found') || errorMessage.includes('WikiPageNotFoundException')) {
+                            console.log(`📄 Page ${currentPath} doesn't exist yet, will update during processing`);
+                        } else {
+                            console.error(`❌ Failed to retrieve ETag for ${currentPath}:`, (error as Error).message);
+                        }
+                    } else {
+                        console.error(`❌ Failed to retrieve ETag for ${currentPath}:`, (error as Error).message);
+                    }
                 }
             } else {
                 console.log(`🔧 Page not found: ${currentPath}. Creating the page.`);

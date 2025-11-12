@@ -42,9 +42,7 @@ export async function runTask({
         // Getting input values
         let orgUrl: string = tlLib.getInput('ADOBaseUrl', true);
         let repositoryName: string = tlLib.getInput("MDRepositoryName", true);
-        let title: string = tlLib.getInput("MDTitle", true);
         let wikiDestination: string = tlLib.getInput("WikiDestination", true);
-        let versionNumber: string = tlLib.getInput("MDVersion", true);
         let wikiSource: string = tlLib.getInput("wikiSource", true); 
         let headerMessage: string = tlLib.getInput("HeaderMessage", false) || '';
         let includePageLink: boolean = tlLib.getBoolInput("IncludePageLink", false) || false;
